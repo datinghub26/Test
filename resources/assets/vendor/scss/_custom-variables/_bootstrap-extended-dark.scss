@@ -1,0 +1,91 @@
+//  ===================================================================================================================
+//  NEXUS Control Center Theme Configuration
+//  ===================================================================================================================
+
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Poppins:wght@300;400;500;600;700&display=swap');
+
+// NEXUS Color Tokens
+$primary: #37E780;
+$secondary: #959FAE;
+$success: #54DD7D;
+$info: #15BDFC;
+$warning: #F4BF3F;
+$danger: #F84A54;
+$light: #242B3A;
+$dark: #1B222F;
+
+// Backgrounds & Surfaces
+$body-bg: #090D16;
+$body-color: #F2F5F9;
+$base: #131823;
+$card-bg: #131823;
+$headings-color: #F2F5F9;
+$border-color: #232B3B;
+
+// Form & Input Overrides
+$input-border-color: #232B3B;
+$input-border-color-focus: $primary;
+$input-bg: #131823;
+$input-color: $body-color;
+$input-placeholder-color: $secondary;
+$input-focus-bg: #1B222F;
+$input-focus-color: $body-color;
+$input-focus-border-color: $primary;
+$input-disabled-bg: #090D16;
+$input-disabled-color: $secondary;
+$input-disabled-border-color: #232B3B;
+$input-border-hover-color: $primary;
+$form-check-input-checked-border-color: $primary;
+
+// Tabs & Navigation
+$nav-tabs-link-active-bg: #131823;
+$nav-tabs-link-active-color: $primary;
+$nav-link-color: $body-color;
+$nav-tabs-link-color: $secondary;
+
+// Typography & Sizing
+$font-family-base: 'Manrope', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+$font-weight-base: 400;
+$font-size-base: 0.875rem;
+
+// Tooltips & Popovers
+$tooltip-font-size: 13px;
+$tooltip-color: $body-color;
+$tooltip-bg: #1B222F;
+
+// Pagination
+$pagination-bg: #1B222F;
+$pagination-disabled-color: $secondary;
+$pagination-color: $body-color;
+$pagination-active-color: #03130B;
+$pagination-active-bg: $primary;
+$pagination-padding-y: 0.5rem;
+$pagination-padding-x: 0.75rem;
+
+// Accordion
+$accordion-icon-color: $body-color;
+$accordion-icon-color-active: $primary;
+$accordion-button-active-bg: rgba(55, 231, 128, 0.08);
+$accordion-button-active-color: $primary;
+
+// Border Radii (NEXUS standard 0.625rem / 10px)
+$border-radius: 0.625rem;
+$border-radius-lg: 0.75rem;
+$border-radius-sm: 0.5rem;
+$badge-border-radius: 9999px;
+$accordion-border-radius: 0.625rem;
+
+:root {
+    --bs-base: #{$base};
+    --bs-body-bg: #{$body-bg};
+    --body-color: #{$body-color};
+    --bs-card-bg: #{$card-bg};
+    --bs-primary: #{$primary};
+    --bs-primary-rgb: 55, 231, 128;
+    --bs-secondary: #{$secondary};
+    --bs-secondary-rgb: 149, 159, 174;
+    --bs-dark: #{$dark};
+    --bs-border-color: #{$border-color};
+    --nexus-cyan: #{$info};
+    --nexus-gradient-primary: linear-gradient(135deg, #37E780, #15BDFC);
+}
