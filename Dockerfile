@@ -58,5 +58,5 @@ RUN mkdir -p /var/www/storage/framework/cache/data \
 # Expose default port
 EXPOSE 8080
 
-# Auto-migrate and start server
-CMD ["sh", "-c", "touch /var/www/database/database.sqlite && chmod 777 /var/www/database/database.sqlite && php artisan package:discover --ansi && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"]
+# Auto-migrate, auto-seed admin and start server
+CMD ["sh", "-c", "touch /var/www/database/database.sqlite && chmod 777 /var/www/database/database.sqlite && php artisan package:discover --ansi && php artisan migrate --force && php artisan db:seed --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"]

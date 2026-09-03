@@ -6,8 +6,6 @@ use App\Http\Controllers\AuthController;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-
 class DatabaseSeeder extends Seeder
 {
     /**
@@ -19,24 +17,28 @@ class DatabaseSeeder extends Seeder
         $this->call(StreakSeeder::class);
         $this->call(LeaderboardSeeder::class);
 
-        if (!app()->isProduction()) {
-            $user = User::create([
-                'email' => 'admin@ziadt.dev',
+        $user = User::firstOrCreate(
+            ['email' => 'admin@ziadt.dev'],
+            [
                 'password' => \Hash::make('password'),
                 'avatar' => 3,
                 'username' => 'admin',
                 'role' => 'admin',
                 'points' => 99999,
-            ]);
+            ]
+        );
 
+        if (!$user->referralData()->exists()) {
             $user->referralData()->create([
                 'referral_code' => AuthController::generateReferralCode(),
             ]);
+        }
 
+        if (!$user->geo()->exists()) {
             $user->geo()->create([
-                'ip' => fake()->ipv4,
-                'country_code' => fake()->countryCode,
-                'user_agent' => fake()->userAgent,
+                'ip' => '127.0.0.1',
+                'country_code' => 'US',
+                'user_agent' => 'Mozilla/5.0',
             ]);
         }
     }
