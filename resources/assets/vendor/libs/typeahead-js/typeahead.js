@@ -1,4 +1,4 @@
-import 'typeahead.js/dist/typeahead.bundle';
+import 'corejs-typeahead/dist/typeahead.bundle';
 
 // try {
 //   window.typeahead = typeahead;
