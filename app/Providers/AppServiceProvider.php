@@ -43,7 +43,10 @@ class AppServiceProvider extends ServiceProvider
             });
 
             LogViewer::auth(function ($request) {
-                return $request->user() && $request->user()->isAdmin();
+                if (config('app.debug')) {
+                    return true;
+                }
+                return $request->user() && ($request->user()->role === 'admin' || (method_exists($request->user(), 'isAdmin') && $request->user()->isAdmin()));
             });
         } catch (\Exception $e) {
         }
