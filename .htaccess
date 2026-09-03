@@ -1,13 +1,16 @@
 <IfModule mod_rewrite.c>
-# That was ONLY to protect you from 500 errors
-# if your server did not have mod_rewrite enabled
+    RewriteEngine On
 
-RewriteEngine On
-# RewriteBase /
-# NOT needed unless you're using mod_alias to redirect
+    # Prevent direct access to sensitive hidden files & directories (.env, .git, etc.)
+    RewriteRule ^\.(.*)$ - [F,L]
 
-RewriteCond %{REQUEST_URI} !/public
-RewriteRule ^(.*)$ public/$1 [L]
-# Direct all requests to /public folder
+    # Prevent access to configuration, test, and container files
+    RewriteRule ^(composer\.(json|lock)|package(-lock)?\.json|Dockerfile|\.dockerignore|phpunit\.xml|vite\.config\.js|postcss\.config\.js)$ - [F,L]
 
+    # Protect internal application directories from public listing
+    RewriteRule ^(app|bootstrap|config|database|resources|routes|storage|tests)/ - [F,L]
+
+    # Route all traffic directly to public/ folder
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
