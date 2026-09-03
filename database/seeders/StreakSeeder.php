@@ -4,14 +4,15 @@ namespace Database\Seeders;
 
 use App\Models\Streak;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 
 class StreakSeeder extends Seeder
 {
     public function run(): void
     {
-        \DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        Schema::disableForeignKeyConstraints();
         Streak::truncate();
-        \DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        Schema::enableForeignKeyConstraints();
 
         Streak::insert([
             [
@@ -40,8 +41,8 @@ class StreakSeeder extends Seeder
             ],
             [
                 'day' => 7,
-                'points' => 1000,
-            ]
+                'points' => 1600,
+            ],
         ]);
     }
 }
