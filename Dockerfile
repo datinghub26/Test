@@ -45,16 +45,18 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 # Install composer packages safely without running artisan scripts during container build
 RUN composer install --no-dev --no-scripts --optimize-autoloader --no-interaction
 
-# Ensure storage directories exist and have proper write permissions
+# Ensure storage & database directories exist and have full write permissions
 RUN mkdir -p /var/www/storage/framework/cache/data \
     /var/www/storage/framework/sessions \
     /var/www/storage/framework/views \
     /var/www/storage/logs \
     /var/www/bootstrap/cache \
-    && chmod -R 777 /var/www/storage /var/www/bootstrap/cache
+    /var/www/database \
+    && touch /var/www/database/database.sqlite \
+    && chmod -R 777 /var/www/storage /var/www/bootstrap/cache /var/www/database
 
 # Expose default port
 EXPOSE 8080
 
-# Start Laravel
-CMD ["sh", "-c", "php artisan package:discover --ansi && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"]
+# Auto-migrate and start server
+CMD ["sh", "-c", "touch /var/www/database/database.sqlite && chmod 777 /var/www/database/database.sqlite && php artisan package:discover --ansi && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"]
