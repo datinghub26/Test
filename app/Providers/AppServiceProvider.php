@@ -42,6 +42,20 @@ class AppServiceProvider extends ServiceProvider
                 );
             });
 
+            // Initialize log files so they appear in Log Viewer
+            $logFiles = [
+                'laravel.log' => 'System log initialized.',
+                'postback.log' => 'Postback log initialized.',
+                'postback-hold.log' => 'Postback hold log initialized.',
+                'postback-error.log' => 'Postback error log initialized.',
+            ];
+            foreach ($logFiles as $file => $msg) {
+                $path = storage_path('logs/' . $file);
+                if (!file_exists($path) || filesize($path) === 0) {
+                    @file_put_contents($path, "[" . date('Y-m-d H:i:s') . "] production.INFO: " . $msg . "\n");
+                }
+            }
+
             LogViewer::auth(function ($request) {
                 if (config('app.debug')) {
                     return true;
