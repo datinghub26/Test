@@ -9,18 +9,23 @@
                 return document.getElementById('adminCashoutAudio');
             }
 
-            // Unlock audio on first user interaction to satisfy browser autoplay policy
+            // Unlock audio on first user interaction silently
             function unlockAudio() {
                 if (audioUnlocked) return;
                 const audio = getAudio();
                 if (audio) {
+                    const originalMuted = audio.muted;
+                    audio.muted = true;
                     audio.play().then(() => {
                         audio.pause();
                         audio.currentTime = 0;
+                        audio.muted = originalMuted;
                         audioUnlocked = true;
                         window.removeEventListener('click', unlockAudio);
                         window.removeEventListener('keydown', unlockAudio);
-                    }).catch(() => {});
+                    }).catch(() => {
+                        audio.muted = originalMuted;
+                    });
                 }
             }
 
@@ -68,28 +73,6 @@
                 const id = e.detail?.id || e.detail?.cashout_id || ('cashout_' + Date.now());
                 window.playAdminCashoutSound(id);
             });
-
-            // Watch for Filament notifications appearing in DOM
-            const observer = new MutationObserver(function (mutations) {
-                mutations.forEach(function (mutation) {
-                    mutation.addedNodes.forEach(function (node) {
-                        if (node.nodeType === 1) {
-                            const text = (node.innerText || node.textContent || '').toLowerCase();
-                            if (text.includes('cashout') || text.includes('withdrawal')) {
-                                const id = node.getAttribute('data-id') || text.substring(0, 30);
-                                window.playAdminCashoutSound(id);
-                            }
-                        }
-                    });
-                });
-            });
-
-            document.addEventListener('DOMContentLoaded', function () {
-                observer.observe(document.body, { childList: true, subtree: true });
-            });
-            if (document.body) {
-                observer.observe(document.body, { childList: true, subtree: true });
-            }
         })();
     </script>
 </div>

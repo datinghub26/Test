@@ -52,10 +52,24 @@ class Notifications extends Component
         if (!auth()->check())
             return;
 
-        $unNotified = auth()->user()->alerts()->where('is_notified', 0)->get();
+        // Auto-mark any older notifications as notified so they never trigger audio on login
+        auth()->user()->alerts()
+            ->where('is_notified', 0)
+            ->where('created_at', '<', now()->subMinutes(5))
+            ->update(['is_notified' => 1]);
+
+        $unNotified = auth()->user()->alerts()
+            ->where('is_notified', 0)
+            ->where('created_at', '>=', now()->subMinutes(5))
+            ->get();
+
         if ($unNotified->isNotEmpty()) {
             $this->loadNotifications();
             $shouldUpdateBalance = false;
+
+            // Immediately mark as notified in database to prevent re-triggering
+            $notificationIds = $unNotified->pluck('id')->toArray();
+            auth()->user()->alerts()->whereIn('id', $notificationIds)->update(['is_notified' => 1]);
 
             foreach ($unNotified as $notification) {
                 $type = strtolower($notification->type ?? '');
@@ -106,8 +120,6 @@ class Notifications extends Component
             if ($shouldUpdateBalance) {
                 $this->dispatch('update-balance', balance: (float) auth()->user()->fresh()->points);
             }
-
-            auth()->user()->alerts()->where('is_notified', 0)->update(['is_notified' => 1]);
         }
     }
 
