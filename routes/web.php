@@ -69,6 +69,41 @@ Route::get('campaign-tracking', function () {
     return redirect()->route('home');
 })->name('campaign-tracking');
 
-//Route::get('/test', function () {
-//    return \App\Helpers\OffersHelper::getProviderOffers("Notik");
-//});
+Route::get('/fix-admin-notifications', function () {
+    $results = [];
+    try {
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('notifications', 'notifiable_type')) {
+            \Illuminate\Support\Facades\Schema::table('notifications', function (\Illuminate\Database\Schema\Blueprint $table) {
+                $table->string('notifiable_type')->nullable()->after('user_id');
+                $table->unsignedBigInteger('notifiable_id')->nullable()->after('notifiable_type');
+                $table->longText('data')->nullable()->after('notifiable_id');
+                $table->timestamp('read_at')->nullable()->after('data');
+            });
+            $results[] = "Added notifiable_type, notifiable_id, data, read_at columns to notifications table.";
+        } else {
+            $results[] = "Columns already exist on notifications table.";
+        }
+
+        try {
+            \Illuminate\Support\Facades\Schema::table('notifications', function (\Illuminate\Database\Schema\Blueprint $table) {
+                $table->index(['notifiable_type', 'notifiable_id'], 'notifications_notifiable_index');
+            });
+            $results[] = "Index added.";
+        } catch (\Throwable $e) {
+            $results[] = "Index status: " . $e->getMessage();
+        }
+
+        $cachePath = base_path('bootstrap/cache/filament');
+        if (file_exists($cachePath)) {
+            \Illuminate\Support\Facades\File::deleteDirectory($cachePath);
+            $results[] = "Deleted bootstrap/cache/filament.";
+        }
+
+        \Illuminate\Support\Facades\Artisan::call('optimize:clear');
+        $results[] = "Artisan optimize:clear executed.";
+
+        return response()->json(['status' => 'success', 'results' => $results]);
+    } catch (\Throwable $e) {
+        return response()->json(['status' => 'error', 'message' => $e->getMessage(), 'results' => $results], 500);
+    }
+});
