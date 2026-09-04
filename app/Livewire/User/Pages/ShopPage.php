@@ -67,21 +67,7 @@ class ShopPage extends Component
         auth()->user()->decrement('points', $realAmount);
         auth()->user()->addNotification('Withdraw Request', "You have requested a cashout of {$amount} ERC", 'cashout_submitted', route('shop'));
         $this->dispatch('update-balance', balance: auth()->user()->points);
-        $this->dispatch('play-cashout-sound', id: $cashout->id);
-
-        try {
-            $admins = \App\Models\User::where('role', 'admin')->get();
-            if ($admins->isNotEmpty()) {
-                \Filament\Notifications\Notification::make()
-                    ->title('New Cashout Request')
-                    ->body("User " . (auth()->user()->username ?? 'Member') . " requested {$amount} ERC via {$this->selectedMethod->name}")
-                    ->icon('heroicon-o-arrow-path-rounded-square')
-                    ->iconColor('success')
-                    ->sendToDatabase($admins);
-            }
-        } catch (\Throwable $e) {
-            // Safe fallback if notifications table is not present
-        }
+        $this->dispatch('play-notification-sound', id: 'shop_' . $cashout->id);
 
         Toaster::success('Cashout request has been submitted successfully');
         $this->dispatch('close-cashout-modal');

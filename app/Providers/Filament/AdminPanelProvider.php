@@ -65,12 +65,6 @@ class AdminPanelProvider extends PanelProvider
                     ->icon('heroicon-o-archive-box')
                     ->url('/log-viewer')
             ])
-            ->databaseNotifications()
-            ->databaseNotificationsPolling('15s')
-            ->renderHook(
-                \Filament\View\PanelsRenderHook::BODY_END,
-                fn() => view('filament.cashout-audio')
-            )
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->plugins([
                 FilamentSettingsPlugin::make()
