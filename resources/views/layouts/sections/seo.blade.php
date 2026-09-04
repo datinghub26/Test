@@ -1,6 +1,6 @@
 @php
     $seo = [
-        'title' => config('app.name')  . ' | The #1 Website to make money online',
+        'title' => config('app.name')  . ' | Earn. Reward. Repeat',
         'description' => 'Complete tasks, play games or take online surveys for money. Want to know how to get free Robux, or how to get free V Bucks. Join ' . config('app.name') . ' today.',
         'thumbnail' => asset('assets/img/thumbnail.jpg'),
     ]

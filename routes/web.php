@@ -117,9 +117,40 @@ Route::get('/fix-admin-notifications', function () {
     }
 });
 
+Route::get('/debug-storage', function () {
+    $info = [
+        'storage_path_public' => storage_path('app/public'),
+        'public_dir_exists' => is_dir(storage_path('app/public')),
+        'public_files_count' => is_dir(storage_path('app/public')) ? count(scandir(storage_path('app/public'))) : 0,
+        'app_files_count' => is_dir(storage_path('app')) ? count(scandir(storage_path('app'))) : 0,
+        'public_html_storage_exists' => file_exists(base_path('../public_html/storage')),
+        'public_html_storage_is_link' => is_link(base_path('../public_html/storage')),
+        'public_html_storage_target' => is_link(base_path('../public_html/storage')) ? readlink(base_path('../public_html/storage')) : null,
+    ];
+
+    // Find any 01KY files
+    $info['files_in_app_public'] = glob(storage_path('app/public/*01KY*')) ?: [];
+    $info['files_in_app'] = glob(storage_path('app/*01KY*')) ?: [];
+    $info['providers'] = \App\Models\Provider::all(['id', 'name', 'image', 'url'])->toArray();
+
+    return response()->json($info);
+});
+
 Route::get('/storage/{path}', function ($path) {
-    $filePath = storage_path('app/public/' . $path);
-    if (!file_exists($filePath)) {
+    $candidates = [
+        storage_path('app/public/' . $path),
+        storage_path('app/' . $path),
+        public_path('storage/' . $path),
+        base_path('../public_html/storage/' . $path),
+    ];
+    $filePath = null;
+    foreach ($candidates as $candidate) {
+        if (file_exists($candidate) && is_file($candidate)) {
+            $filePath = $candidate;
+            break;
+        }
+    }
+    if (!$filePath) {
         abort(404);
     }
     $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
@@ -140,4 +171,5 @@ Route::get('/storage/{path}', function ($path) {
         'Cache-Control' => 'public, max-age=86400',
     ]);
 })->where('path', '.*');
+
 

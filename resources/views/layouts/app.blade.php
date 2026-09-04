@@ -15,7 +15,7 @@
         />
 
         <meta name="csrf-token" content="{{ csrf_token() }}">
-        <title>{{ $title ?? config('app.name')  . ' | The #1 Website to make money online' }}</title>
+        <title>{{ $title ?? config('app.name')  . ' | Earn. Reward. Repeat' }}</title>
         <link rel="icon" type="image/x-icon" href="{{ asset('assets/img/icon-light.png') }}"/>
 
         <!-- SEO -->
@@ -141,102 +141,10 @@
 
         @stack('js')
 
-        <!-- Audio notification for offers and cashouts -->
-        @php
-            $customSound = setting('general.notification_sound');
-            $soundSrc = $customSound 
-                ? \Illuminate\Support\Facades\Storage::url($customSound) 
-                : (file_exists(public_path('assets/sounds/notification.mp3')) 
-                    ? asset('assets/sounds/notification.mp3') 
-                    : asset('assets/sounds/coin-withdraw.mp3'));
-        @endphp
-        <audio id="globalCashoutAudio" src="{{ $soundSrc }}" preload="auto"></audio>
+        <!-- Audio notification disabled to stop recurring beep sound -->
         <script>
-            (function () {
-                let userInteracted = false;
-                function unlockAudio() {
-                    if (userInteracted) return;
-                    const audio = document.getElementById('globalCashoutAudio');
-                    if (audio) {
-                        const originalMuted = audio.muted;
-                        audio.muted = true;
-                        audio.play().then(() => {
-                            audio.pause();
-                            audio.currentTime = 0;
-                            audio.muted = originalMuted;
-                            userInteracted = true;
-                            window.removeEventListener('click', unlockAudio);
-                            window.removeEventListener('keydown', unlockAudio);
-                        }).catch(() => {
-                            audio.muted = originalMuted;
-                        });
-                    }
-                }
-                window.addEventListener('click', unlockAudio, { once: false });
-                window.addEventListener('keydown', unlockAudio, { once: false });
-
-                window.playUserCashoutSound = function (eventId) {
-                    try {
-                        if (!eventId) {
-                            return; // Do not play without valid event ID
-                        }
-
-                        const key = 'played_user_cashout_events';
-                        let played = [];
-                        try {
-                            played = JSON.parse(localStorage.getItem(key) || '[]');
-                        } catch (e) { played = []; }
-
-                        if (played.includes(eventId)) {
-                            return;
-                        }
-
-                        const audio = document.getElementById('globalCashoutAudio');
-                        if (audio) {
-                            audio.currentTime = 0;
-                            audio.volume = 0.6;
-                            const p = audio.play();
-                            if (p !== undefined) {
-                                p.then(() => {
-                                    played.push(eventId);
-                                    if (played.length > 100) played.shift();
-                                    localStorage.setItem(key, JSON.stringify(played));
-                                }).catch((err) => {
-                                    console.log('Autoplay restriction: waiting for user interaction.', err);
-                                });
-                            }
-                        }
-                    } catch (e) {
-                        console.warn('Audio play notice:', e);
-                    }
-                };
-
-                function resolveEventId(e, defaultPrefix) {
-                    if (!e) return null;
-                    let val = null;
-                    if (typeof e.detail === 'object' && e.detail !== null) {
-                        val = e.detail.id || (Array.isArray(e.detail) ? e.detail[0]?.id : null);
-                    } else if (typeof e.detail === 'string' || typeof e.detail === 'number') {
-                        val = e.detail;
-                    }
-                    return val ? (defaultPrefix + '_' + val) : null;
-                }
-
-                window.addEventListener('play-notification-sound', function (e) {
-                    const id = resolveEventId(e, 'notif');
-                    if (id) window.playUserCashoutSound(id);
-                });
-
-                window.addEventListener('play-cashout-sound', function (e) {
-                    const id = resolveEventId(e, 'cashout');
-                    if (id) window.playUserCashoutSound(id);
-                });
-
-                window.addEventListener('play-offer-sound', function (e) {
-                    const id = resolveEventId(e, 'offer');
-                    if (id) window.playUserCashoutSound(id);
-                });
-            })();
+            // Audio notification silenced per user request
+            window.playUserCashoutSound = function () { /* disabled */ };
         </script>
     </body>
 </html>

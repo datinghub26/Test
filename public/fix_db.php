@@ -84,27 +84,48 @@ if (is_dir($viewCache)) {
 }
 
 // 4. Ensure storage files are linked or copied to public_html/storage
-$srcStorage = $gtpDir . '/storage/app/public';
 $pubStorage = __DIR__ . '/storage';
-if (is_dir($srcStorage)) {
-    if (!file_exists($pubStorage)) {
-        @symlink($srcStorage, $pubStorage);
-    }
-    // If symlinks are not followed or directory exists, copy files so images never 404
-    if (!is_dir($pubStorage)) {
-        @mkdir($pubStorage, 0755, true);
-    }
-    $copied = 0;
-    foreach (scandir($srcStorage) as $item) {
-        if ($item === '.' || $item === '..') continue;
-        $srcFile = $srcStorage . '/' . $item;
-        $dstFile = $pubStorage . '/' . $item;
-        if (is_file($srcFile) && !file_exists($dstFile)) {
-            if (@copy($srcFile, $dstFile)) $copied++;
-        }
-    }
-    echo "Storage check complete: $copied images copied to public web root.<br>";
+if (!is_dir($pubStorage) && !is_link($pubStorage)) {
+    @mkdir($pubStorage, 0755, true);
 }
 
-echo "<h3>All set! <a href='/admin'>Go to Admin Panel</a> | <a href='/partners'>View Partners</a></h3>";
+$appDir = $gtpDir . '/storage/app';
+$publicAppDir = $gtpDir . '/storage/app/public';
+if (!is_dir($publicAppDir)) {
+    @mkdir($publicAppDir, 0755, true);
+}
+
+$copied = 0;
+$foundFiles = [];
+
+if (is_dir($appDir)) {
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($appDir, RecursiveDirectoryIterator::SKIP_DOTS)
+    );
+    foreach ($iterator as $file) {
+        if ($file->isFile()) {
+            $filename = $file->getFilename();
+            $ext = strtolower($file->getExtension());
+            if (in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif', 'mp3', 'ico'])) {
+                $foundFiles[] = $file->getPathname();
+                $dest1 = $pubStorage . '/' . $filename;
+                $dest2 = $publicAppDir . '/' . $filename;
+                if (!file_exists($dest1) || filesize($dest1) === 0) {
+                    if (@copy($file->getPathname(), $dest1)) $copied++;
+                }
+                if (!file_exists($dest2) || filesize($dest2) === 0) {
+                    @copy($file->getPathname(), $dest2);
+                }
+            }
+        }
+    }
+}
+
+echo "Storage sync: Found " . count($foundFiles) . " media files. Copied $copied files to public_html/storage.<br>";
+if (!empty($foundFiles)) {
+    echo "<details><summary>View synced files (" . count($foundFiles) . ")</summary><pre>" . htmlspecialchars(implode("\n", $foundFiles)) . "</pre></details>";
+}
+
+echo "<h3>All set! <a href='/admin'>Go to Admin Panel</a> | <a href='/partners'>View Partners</a> | <a href='/earn'>View Earn</a></h3>";
+
 

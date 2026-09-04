@@ -41,21 +41,34 @@ if (!function_exists('ip')) {
 if (!function_exists('country_code')) {
     function country_code(): ?string
     {
+        static $cached = null;
+        if ($cached !== null) {
+            return $cached;
+        }
+
         if (config('location.testing.enabled') && ip() == '127.0.0.1') {
-            return 'EG';
+            $cached = 'EG';
+            return $cached;
         }
 
         $countryCode = request()->server('HTTP_CF_IPCOUNTRY');
-        if ($countryCode) {
-            return $countryCode;
+        if ($countryCode && $countryCode !== 'XX' && $countryCode !== 'T1') {
+            $cached = strtoupper($countryCode);
+            return $cached;
         }
 
+        $ip = ip();
+        $cacheKey = 'ip_geo_country_' . md5($ip);
         try {
-            $position = Location::get(ip());
-            return $position->countryCode ?? null;
+            $cached = cache()->remember($cacheKey, 86400, function () use ($ip) {
+                $position = Location::get($ip);
+                return $position && !empty($position->countryCode) ? strtoupper($position->countryCode) : null;
+            });
         } catch (\Throwable $e) {
-            return null;
+            $cached = null;
         }
+
+        return $cached;
     }
 }
 
