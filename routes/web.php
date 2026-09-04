@@ -99,11 +99,45 @@ Route::get('/fix-admin-notifications', function () {
             $results[] = "Deleted bootstrap/cache/filament.";
         }
 
+        $viewsPath = storage_path('framework/views');
+        if (file_exists($viewsPath)) {
+            foreach (glob("$viewsPath/*.php") as $f) {
+                @unlink($f);
+            }
+            $results[] = "Cleared compiled blade view cache.";
+        }
+
         \Illuminate\Support\Facades\Artisan::call('optimize:clear');
         $results[] = "Artisan optimize:clear executed.";
+
 
         return response()->json(['status' => 'success', 'results' => $results]);
     } catch (\Throwable $e) {
         return response()->json(['status' => 'error', 'message' => $e->getMessage(), 'results' => $results], 500);
     }
 });
+
+Route::get('/storage/{path}', function ($path) {
+    $filePath = storage_path('app/public/' . $path);
+    if (!file_exists($filePath)) {
+        abort(404);
+    }
+    $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+    $mimeType = match ($ext) {
+        'png' => 'image/png',
+        'jpg', 'jpeg' => 'image/jpeg',
+        'webp' => 'image/webp',
+        'svg' => 'image/svg+xml',
+        'gif' => 'image/gif',
+        'mp3' => 'audio/mpeg',
+        'wav' => 'audio/wav',
+        'ogg' => 'audio/ogg',
+        'ico' => 'image/x-icon',
+        default => mime_content_type($filePath) ?: 'application/octet-stream',
+    };
+    return response()->file($filePath, [
+        'Content-Type' => $mimeType,
+        'Cache-Control' => 'public, max-age=86400',
+    ]);
+})->where('path', '.*');
+
