@@ -141,5 +141,84 @@
 
         @stack('js')
 
+        <!-- Audio notification for offers and cashouts -->
+        @php
+            $customSound = setting('general.notification_sound');
+            $soundSrc = $customSound 
+                ? \Illuminate\Support\Facades\Storage::url($customSound) 
+                : (file_exists(public_path('assets/sounds/notification.mp3')) 
+                    ? asset('assets/sounds/notification.mp3') 
+                    : asset('assets/sounds/coin-withdraw.mp3'));
+        @endphp
+        <audio id="globalCashoutAudio" src="{{ $soundSrc }}" preload="auto"></audio>
+        <script>
+            (function () {
+                let userInteracted = false;
+                function unlockAudio() {
+                    if (userInteracted) return;
+                    const audio = document.getElementById('globalCashoutAudio');
+                    if (audio) {
+                        audio.play().then(() => {
+                            audio.pause();
+                            audio.currentTime = 0;
+                            userInteracted = true;
+                            window.removeEventListener('click', unlockAudio);
+                            window.removeEventListener('keydown', unlockAudio);
+                        }).catch(() => {});
+                    }
+                }
+                window.addEventListener('click', unlockAudio, { once: false });
+                window.addEventListener('keydown', unlockAudio, { once: false });
+
+                window.playUserCashoutSound = function (eventId) {
+                    try {
+                        const key = 'played_user_cashout_events';
+                        let played = [];
+                        try {
+                            played = JSON.parse(localStorage.getItem(key) || '[]');
+                        } catch (e) { played = []; }
+
+                        if (eventId && played.includes(eventId)) {
+                            return;
+                        }
+
+                        const audio = document.getElementById('globalCashoutAudio');
+                        if (audio) {
+                            audio.currentTime = 0;
+                            audio.volume = 0.6;
+                            const p = audio.play();
+                            if (p !== undefined) {
+                                p.then(() => {
+                                    if (eventId) {
+                                        played.push(eventId);
+                                        if (played.length > 50) played.shift();
+                                        localStorage.setItem(key, JSON.stringify(played));
+                                    }
+                                }).catch((err) => {
+                                    console.log('Autoplay restriction: waiting for user interaction.', err);
+                                });
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Audio play notice:', e);
+                    }
+                };
+
+                window.addEventListener('play-notification-sound', function (e) {
+                    const id = e.detail?.id ? ('notif_' + e.detail.id) : ('notif_' + Date.now());
+                    window.playUserCashoutSound(id);
+                });
+
+                window.addEventListener('play-cashout-sound', function (e) {
+                    const id = e.detail?.id ? ('cashout_' + e.detail.id) : ('cashout_' + Date.now());
+                    window.playUserCashoutSound(id);
+                });
+
+                window.addEventListener('play-offer-sound', function (e) {
+                    const id = e.detail?.id ? ('offer_' + e.detail.id) : ('offer_' + Date.now());
+                    window.playUserCashoutSound(id);
+                });
+            })();
+        </script>
     </body>
 </html>

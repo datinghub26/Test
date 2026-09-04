@@ -79,19 +79,17 @@ class User extends Authenticatable implements FilamentUser, HasName, CanResetPas
 
     public function avatar(): string
     {
-        return asset("assets/avatars/memoji_$this->avatar.png");
+        $avatar = !empty($this->avatar) ? $this->avatar : 1;
+        return asset("assets/avatars/memoji_{$avatar}.png");
     }
 
     protected function avatarUrl(): Attribute
     {
-        if (!$this->avatar) {
-            return Attribute::make(
-                get: fn($value, array $attributes) => asset("assets/avatars/memoji_1.png"),
-            );
-        }
-
         return Attribute::make(
-            get: fn($value, array $attributes) => asset("assets/avatars/memoji_$this->avatar.png"),
+            get: function ($value, array $attributes) {
+                $avatar = !empty($attributes['avatar'] ?? null) ? $attributes['avatar'] : 1;
+                return asset("assets/avatars/memoji_{$avatar}.png");
+            }
         );
     }
 
@@ -222,7 +220,7 @@ class User extends Authenticatable implements FilamentUser, HasName, CanResetPas
                 'ip' => ip(),
                 'country_code' => country_code(),
             ]);
-            $referredUser->addNotification('Referral Commission', "You have received $commission point commission from a referred user.");
+            $referredUser->addNotification('Referral Commission', "You have received $commission ERC commission from a referred user.");
         }
     }
 
@@ -254,7 +252,7 @@ class User extends Authenticatable implements FilamentUser, HasName, CanResetPas
                 'ip' => ip(),
                 'country_code' => country_code(),
             ]);
-            $this->addNotification('Level Up', "You have been rewarded {$rewardPoints} points for reaching level {$newLevel->level}.");
+            $this->addNotification('Level Up', "You have been rewarded {$rewardPoints} ERC for reaching level {$newLevel->level}.");
         } else {
             $this->addNotification('Level Up', "You have reached level {$newLevel->level}.", 'info');
         }

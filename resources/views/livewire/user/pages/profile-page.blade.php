@@ -24,7 +24,8 @@
                                  style="background: conic-gradient(var(--bs-primary) 0% {{ $progress }}%, var(--bs-body-bg) {{ $progress }}% 100%);">
                                 <img src="{{ auth()->user()->avatar() }}" alt="User Avatar"
                                      class="rounded-circle"
-                                     style="width: 100px;">
+                                     style="width: 100px;"
+                                     onerror="this.onerror=null;this.src='{{ asset('assets/avatars/memoji_1.png') }}';">
                             </div>
                             <div class="mt-2">
                                 <span class="badge bg-label-primary">Level {{ auth()->user()->level }}</span>
@@ -179,7 +180,7 @@
                                     <tr>
                                         <th>Name</th>
                                         <th>Time</th>
-                                        <th>Points</th>
+                                        <th>ERC</th>
                                     </tr>
                                     </thead>
                                     <tbody>
@@ -188,7 +189,8 @@
                                             <td class="d-flex align-items-center gap-2">
                                                 @if($lead->image)
                                                     <img src="{{ $lead->image }}" alt="{{ $lead->name }}"
-                                                         class="rounded-3" style="width: 30px;">
+                                                         class="rounded-3" style="width: 30px;"
+                                                         onerror="this.onerror=null;this.src='{{ asset('assets/img/placeholder-offer.svg') }}';">
                                                 @else
                                                     <div
                                                         class="bg-label-primary bg-opacity-50 rounded-3  d-flex align-items-center"
@@ -220,7 +222,7 @@
                             <div class="table-responsive">
                                 <table class="table align-middle mb-0 small " style="font-weight: 600">
                                     <thead>
-                                    <tr>
+                                     <tr>
                                         <th>Method</th>
                                         <th>Time</th>
                                         <th>Amount</th>
@@ -232,7 +234,8 @@
                                             <td class="d-flex align-items-center gap-2">
                                                 <img src="{{ Storage::url($withdrawal->method_image) }}"
                                                      alt="{{ $withdrawal->method_name }}"
-                                                     style="width: 30px;">
+                                                     style="width: 30px;"
+                                                     onerror="this.onerror=null;this.src='{{ asset('assets/img/placeholder-provider.svg') }}';">
                                             </td>
                                             <td>{{ $withdrawal->updated_at->diffForHumans() }}</td>
                                             <td class="text-truncate">
@@ -268,7 +271,8 @@
                                             <td class="d-flex align-items-center gap-2">
                                                 <img src="{{ Storage::url($withdrawal->method_image) }}"
                                                      alt="{{ $withdrawal->method_name }}"
-                                                     style="width: 30px;">
+                                                     style="width: 30px;"
+                                                     onerror="this.onerror=null;this.src='{{ asset('assets/img/placeholder-provider.svg') }}';">
                                             </td>
                                             <td>{{ $withdrawal->updated_at->diffForHumans() }}</td>
                                             <td class="text-truncate">

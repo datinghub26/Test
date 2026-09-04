@@ -12,19 +12,22 @@
             <img class="card-img-top" style="border-radius: 10px"
                  src="{{ $offer['image'] }}"
                  alt="{{ $offer['title'] }}"
-                 onerror="this.src='{{ asset('assets/img/Image-not-found.png') }}'"
+                 onerror="this.onerror=null; this.src='{{ asset('assets/img/placeholder-offer.svg') }}';"
                  @if(!$swiper) style="min-height: 124px;" @endif
             >
 
+            @php
+                $offerDevices = is_array($offer['devices'] ?? null) ? $offer['devices'] : [];
+            @endphp
             <div class="badge bg-label-dark position-absolute"
                  style="top: 10px; right: 10px; padding: 5px 8px; background-color: rgba(7,8,9,0.56) !important">
                 <div class="d-flex align-items-center justify-content-center gap-2">
                     <span class="fa-brands fa-android text-white"
-                          x-show="{{ (int)in_array('Android', $offer['devices'])  }}"></span>
+                          x-show="{{ (int)in_array('Android', $offerDevices)  }}"></span>
                     <span class="fa-brands fa-apple text-white"
-                          x-show="{{ (int)in_array('iOS', $offer['devices']) }}"></span>
+                          x-show="{{ (int)in_array('iOS', $offerDevices) }}"></span>
                     <span class="fa-solid fa-laptop text-white"
-                          x-show="{{ (int)in_array('Desktop', $offer['devices']) || count($offer['devices'] ?? []) == 0 ? 1 : 0  }}"></span>
+                          x-show="{{ (int)in_array('Desktop', $offerDevices) || count($offerDevices) == 0 ? 1 : 0  }}"></span>
                 </div>
             </div>
 
@@ -52,8 +55,8 @@
                     </span>
 
                 <span x-show.important="is_coin == '1'" class="d-flex align-items-center fw-medium">
-                        <img src="{{ asset('assets/img/coin.png') }}" alt="" width="17px" class="me-1">
-                        <span style="font-size: 15px">{{ format_coins($offer['points']) }}</span>
+                        <img src="{{ asset('assets/img/coin.png') }}" alt="ERC" width="17px" class="me-1">
+                        <span style="font-size: 15px">{{ format_coins($offer['points']) }} ERC</span>
                 </span>
                 {{--                </span>--}}
             </div>

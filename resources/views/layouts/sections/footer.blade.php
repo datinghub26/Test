@@ -4,9 +4,7 @@
             <div class="row">
                 <div class="col-md-4 text-center text-md-start mt-4 mt-md-0 order-last order-md-first">
                     <x-logo/>
-                    <p class="footer-text small mt-2 mb-0"> {{ config('app.name') }} | All rights reserved
-                        &copy {{ now()->year }}
-                    </p>
+                    <p class="footer-text small mt-2 mb-0">All rights reserved by ERC &copy; {{ now()->year }}</p>
 {{--            
 
 {{--                    <a href="//www.dmca.com/Protection/Status.aspx?ID=9fb78912-8093-4c25-85f1-98bd3dcb7c13"--}}

@@ -22,6 +22,7 @@ class Offer extends Model
         'payout',
         'is_featured',
         'is_manual',
+        'is_active',
         'hold_duration_days',
         'categories',
         'countries',
@@ -32,6 +33,7 @@ class Offer extends Model
     protected $casts = [
         'is_featured' => 'boolean',
         'is_manual' => 'boolean',
+        'is_active' => 'boolean',
         'hold_duration_days' => 'integer',
         'instructions' => 'array',
         'categories' => 'array',
@@ -51,6 +53,17 @@ class Offer extends Model
     }
 
     /**
+     * Scope for active (non-disabled) offers.
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        if (\Illuminate\Support\Facades\Schema::hasColumn('offers', 'is_active')) {
+            return $query->where('is_active', true);
+        }
+        return $query;
+    }
+
+    /**
      * Scope for manually featured / pinned offers.
      */
     public function scopeFeatured(Builder $query): Builder
@@ -62,44 +75,84 @@ class Offer extends Model
     }
 
     /**
-     * Fetch top offers using the hybrid model:
-     * 1. Manual/Admin featured offers first
-     * 2. Highest completion count offers to fill remaining slots
+     * Fetch top offers using dynamic mode (auto, manual, hybrid):
+     * Supports admin configuration: top_offers.mode, top_offers.limit, top_offers.ranking_metric
      */
-    public static function getTopHybridOffers(int $limit = 10, ?string $country = null)
+    public static function getTopHybridOffers(int $limit = 3, ?string $country = null)
     {
         $country = $country ?? strtoupper(country_code() ?? 'UNKNOWN');
+        $configuredLimit = (int) (function_exists('setting') ? setting('top_offers.limit', $limit) : $limit);
+        $limit = $configuredLimit > 0 ? $configuredLimit : $limit;
+        $mode = function_exists('setting') ? setting('top_offers.mode', 'hybrid') : 'hybrid';
+        $metric = function_exists('setting') ? setting('top_offers.ranking_metric', 'conversions') : 'conversions';
 
-        // 1. Fetch manually featured / pinned offers
+        $countryFilter = function ($query) use ($country) {
+            return $query->whereJsonContains('countries', $country)
+                ->orWhereJsonLength('countries', 0)
+                ->orWhereNull('countries');
+        };
+
+        // Manual mode: strictly manual / featured offers
+        if ($mode === 'manual') {
+            return static::query()
+                ->active()
+                ->featured()
+                ->withCount('leads')
+                ->where($countryFilter)
+                ->latest('updated_at')
+                ->take($limit)
+                ->get();
+        }
+
+        // Auto mode: ranked strictly by conversion / performance metric
+        if ($mode === 'auto') {
+            $query = static::query()
+                ->active()
+                ->withCount('leads')
+                ->where($countryFilter);
+
+            if ($metric === 'points') {
+                $query->orderByDesc('points')->orderByDesc('leads_count');
+            } elseif ($metric === 'payout') {
+                $query->orderByDesc('payout')->orderByDesc('leads_count');
+            } else {
+                $query->orderByDesc('leads_count')->orderByDesc('points');
+            }
+
+            return $query->take($limit)->get();
+        }
+
+        // Hybrid mode (default): Manual/Admin featured offers first, then best-converting to fill slots
         $manualOffers = static::query()
+            ->active()
             ->featured()
             ->withCount('leads')
-            ->where(function ($query) use ($country) {
-                return $query->whereJsonContains('countries', $country)
-                    ->orWhereJsonLength('countries', 0);
-            })
+            ->where($countryFilter)
             ->latest('updated_at')
             ->take($limit)
             ->get();
 
         $manualCount = $manualOffers->count();
 
-        // 2. If slots are still available, fill with highest completion counts
         if ($manualCount < $limit) {
             $remaining = $limit - $manualCount;
             $manualIds = $manualOffers->pluck('id')->toArray();
 
-            $popularOffers = static::query()
+            $popularQuery = static::query()
+                ->active()
                 ->whereNotIn('id', $manualIds)
                 ->withCount('leads')
-                ->where(function ($query) use ($country) {
-                    return $query->whereJsonContains('countries', $country)
-                        ->orWhereJsonLength('countries', 0);
-                })
-                ->orderByDesc('leads_count')
-                ->orderByDesc('points')
-                ->take($remaining)
-                ->get();
+                ->where($countryFilter);
+
+            if ($metric === 'points') {
+                $popularQuery->orderByDesc('points')->orderByDesc('leads_count');
+            } elseif ($metric === 'payout') {
+                $popularQuery->orderByDesc('payout')->orderByDesc('leads_count');
+            } else {
+                $popularQuery->orderByDesc('leads_count')->orderByDesc('points');
+            }
+
+            $popularOffers = $popularQuery->take($remaining)->get();
 
             return $manualOffers->concat($popularOffers);
         }

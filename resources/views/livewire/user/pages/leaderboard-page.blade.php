@@ -41,7 +41,7 @@
                     <tr>
                         <th>Rank</th>
                         <th>User</th>
-                        <th>Points</th>
+                        <th>ERC</th>
                         <th>Prize</th>
                     </tr>
                     </thead>
@@ -73,15 +73,15 @@
                                        style="font-size: 12px"></i>
                                 </a>
                             </td>
-                            <td class="text-primary">{{ $leader->points }}</td>
+                            <td class="text-primary">{{ number_format($leader->points) }} ERC</td>
                             <td>
                                 <div class="d-flex align-items-center">
                                     <img x-show="is_coin == '1'"
                                          src="{{ asset('assets/img/coin.png') }}"
-                                         alt="" width="10px" class="me-1">
+                                         alt="ERC" width="10px" class="me-1">
 
                                     <span
-                                        x-text="is_coin == '1' ? '{{ number_format($this->getPrize($loop->iteration)) }}' : '${{ to_money_str($this->getPrize($loop->iteration)) }}'"></span>
+                                        x-text="is_coin == '1' ? '{{ number_format($this->getPrize($loop->iteration)) }} ERC' : '${{ to_money_str($this->getPrize($loop->iteration)) }}'"></span>
                                 </div>
                             </td>
                         </tr>

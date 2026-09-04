@@ -34,7 +34,7 @@
                                 <img src="{{ asset('assets/img/coin.png') }}" alt="" width="12px" class="me-1" x-show="is_coin == '1'">
 
                                 <h5 class="card-title  mb-0 text-white f-md"
-                                    x-text="is_coin == '0' ? '${{ to_money_str($referralPoints) }}' : '{{ $referralPoints }}'">
+                                    x-text="is_coin == '0' ? '${{ to_money_str($referralPoints) }}' : '{{ number_format($referralPoints) }} ERC'">
                                 </h5>
                             </div>
 
@@ -57,7 +57,7 @@
 
                     <p class="card-text small">
                         Referred friends will also receive a bonus of <span
-                            class="fw-bolder text-primary">{{ setting('referral.points', 100) }} coins</span> when
+                            class="fw-bolder text-primary">{{ setting('referral.points', 100) }} ERC</span> when
                         they sign up.
                     </p>
                 </div>

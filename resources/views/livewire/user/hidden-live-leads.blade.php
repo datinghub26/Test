@@ -43,7 +43,7 @@ class extends Component {
                                 <th>User</th>
                                 <th>Name</th>
                                 <th>Time</th>
-                                <th>Points</th>
+                                <th>ERC</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -54,6 +54,7 @@ class extends Component {
                                             @if($lead->user->avatar_url)
                                                 <img src="{{ $lead->user->avatar_url }}"
                                                      alt="{{ $lead->user->username }}"
+                                                     onerror="this.onerror=null; this.src='{{ asset('assets/avatars/memoji_1.png') }}';"
                                                      class="rounded-3" style="width: 30px;">
                                             @else
                                                 <div
@@ -75,6 +76,7 @@ class extends Component {
                                     <td class="d-flex align-items-center gap-2">
                                         @if($lead->image)
                                             <img src="{{ $lead->image }}" alt="{{ $lead->name }}"
+                                                 onerror="this.onerror=null; this.src='{{ asset('assets/img/icon-light.png') }}';"
                                                  class="rounded-3" style="width: 30px;">
                                         @else
                                             <div

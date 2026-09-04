@@ -46,18 +46,18 @@ class ShopPage extends Component
         $amount = $this->isCoin ? $this->amount : $this->amount * 1000;
 
         if ($amount < $this->selectedMethod->minimum) {
-            $requiredAmount = $isCoin ? number_format($this->selectedMethod->minimum) . ' point' : '$' . to_money_str($this->selectedMethod->minimum, 2);
+            $requiredAmount = $isCoin ? number_format($this->selectedMethod->minimum) . ' ERC' : '$' . to_money_str($this->selectedMethod->minimum, 2);
             $this->addError('amount', "Minimum amount is $requiredAmount");
             return;
         }
 
         $realAmount = $amount + percentage_value($amount, $this->selectedMethod->fee);
         if ($realAmount > auth()->user()->points) {
-            Toaster::info("You don't have enough points to cashout");
+            Toaster::info("You don't have enough ERC to cashout");
             return;
         }
 
-        auth()->user()->cashouts()->create([
+        $cashout = auth()->user()->cashouts()->create([
             'method_name' => $this->selectedMethod->name,
             'method_image' => $this->selectedMethod->image,
             'address' => $this->address,
@@ -65,8 +65,24 @@ class ShopPage extends Component
         ]);
 
         auth()->user()->decrement('points', $realAmount);
-        auth()->user()->addNotification('Withdraw Request', "You have requested a cashout of {$amount} point", 'info', route('shop'));
+        auth()->user()->addNotification('Withdraw Request', "You have requested a cashout of {$amount} ERC", 'cashout_submitted', route('shop'));
         $this->dispatch('update-balance', balance: auth()->user()->points);
+        $this->dispatch('play-cashout-sound', id: $cashout->id);
+
+        try {
+            $admins = \App\Models\User::where('role', 'admin')->get();
+            if ($admins->isNotEmpty()) {
+                \Filament\Notifications\Notification::make()
+                    ->title('New Cashout Request')
+                    ->body("User " . (auth()->user()->username ?? 'Member') . " requested {$amount} ERC via {$this->selectedMethod->name}")
+                    ->icon('heroicon-o-arrow-path-rounded-square')
+                    ->iconColor('success')
+                    ->sendToDatabase($admins);
+            }
+        } catch (\Throwable $e) {
+            // Safe fallback if notifications table is not present
+        }
+
         Toaster::success('Cashout request has been submitted successfully');
         $this->dispatch('close-cashout-modal');
     }

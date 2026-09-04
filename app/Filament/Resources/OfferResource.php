@@ -51,6 +51,10 @@ class OfferResource extends Resource
                     ->required()
                     ->numeric()
                     ->default(0),
+                Forms\Components\Toggle::make('is_active')
+                    ->label('Active')
+                    ->helperText('Enable or disable this offer on the website.')
+                    ->default(true),
                 Forms\Components\Toggle::make('is_featured')
                     ->label('Featured Offer')
                     ->helperText('Pin this offer in the Top Offers / Featured section.')
@@ -78,12 +82,15 @@ class OfferResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('offer_id')
                     ->searchable(),
-                Tables\Columns\ImageColumn::make('image'),
+                Tables\Columns\ImageColumn::make('image')
+                    ->defaultImageUrl(asset('assets/img/placeholder-offer.svg')),
                 Tables\Columns\TextColumn::make('provider')
                     ->badge()
                     ->searchable(),
                 Tables\Columns\TextColumn::make('title')
                     ->searchable(),
+                Tables\Columns\ToggleColumn::make('is_active')
+                    ->label('Active'),
                 Tables\Columns\ToggleColumn::make('is_featured')
                     ->label('Featured'),
                 Tables\Columns\ToggleColumn::make('is_manual')
@@ -120,6 +127,15 @@ class OfferResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                Tables\Filters\TernaryFilter::make('is_active')
+                    ->label('Active Status')
+                    ->placeholder('All Offers')
+                    ->trueLabel('Active Only')
+                    ->falseLabel('Disabled Only'),
+                Tables\Filters\TernaryFilter::make('is_featured')
+                    ->label('Featured'),
+                Tables\Filters\TernaryFilter::make('is_manual')
+                    ->label('Manual Override'),
                 Tables\Filters\SelectFilter::make('provider')
                     ->options(Offer::query()->pluck('provider')->flatten()->unique()->mapWithKeys(fn($provider) => [$provider => $provider])),
                 Tables\Filters\SelectFilter::make('devices')
@@ -142,10 +158,6 @@ class OfferResource extends Resource
 
                             return [$country => $country];
                         });
-
-
-//                        dd(Offer::query()->pluck('countries')->flatten()->unique()->mapWithKeys(fn($country) => [$country => $country]));
-//                        return Offer::query()->pluck('countries')->flatten()->unique()->mapWithKeys(fn($country) => [$country => $country]);
                     })
                     ->query(function (Builder $query, array $data) {
                         return $data['value'] ? $query->whereJsonContains('countries', $data['value']) : $query;
@@ -153,10 +165,27 @@ class OfferResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\BulkAction::make('enable')
+                        ->label('Enable Selected')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->action(fn(\Illuminate\Database\Eloquent\Collection $records) => $records->each(fn(Offer $record) => $record->update(['is_active' => true]))),
+                    Tables\Actions\BulkAction::make('disable')
+                        ->label('Disable Selected')
+                        ->icon('heroicon-o-x-circle')
+                        ->color('danger')
+                        ->action(fn(\Illuminate\Database\Eloquent\Collection $records) => $records->each(fn(Offer $record) => $record->update(['is_active' => false]))),
+                    Tables\Actions\BulkAction::make('feature')
+                        ->label('Feature Selected')
+                        ->icon('heroicon-o-star')
+                        ->action(fn(\Illuminate\Database\Eloquent\Collection $records) => $records->each(fn(Offer $record) => $record->update(['is_featured' => true]))),
+                    Tables\Actions\BulkAction::make('unfeature')
+                        ->label('Unfeature Selected')
+                        ->icon('heroicon-o-star')
+                        ->action(fn(\Illuminate\Database\Eloquent\Collection $records) => $records->each(fn(Offer $record) => $record->update(['is_featured' => false]))),
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);

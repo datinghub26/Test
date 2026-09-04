@@ -53,7 +53,7 @@ if (!function_exists('country_code')) {
         try {
             $position = Location::get(ip());
             return $position->countryCode ?? null;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return null;
         }
     }

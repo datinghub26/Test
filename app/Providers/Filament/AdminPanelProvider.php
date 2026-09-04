@@ -65,15 +65,18 @@ class AdminPanelProvider extends PanelProvider
                     ->icon('heroicon-o-archive-box')
                     ->url('/log-viewer')
             ])
-
-//            ->sidebarFullyCollapsibleOnDesktop()
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('15s')
+            ->renderHook(
+                \Filament\View\PanelsRenderHook::BODY_END,
+                fn() => view('filament.cashout-audio')
+            )
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->plugins([
-//                \FilipFonal\FilamentLogManager\FilamentLogManager::make(),
-                //EmailTemplatesPlugin::make(),
                 FilamentSettingsPlugin::make()
                     ->pages([
                         Settings::class,
+                        \App\Filament\Pages\Settings\OffersSettings::class,
                     ])
             ]);
     }

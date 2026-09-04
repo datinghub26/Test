@@ -64,18 +64,24 @@ class Offers extends Component
     {
         $country = strtoupper(country_code() ?? 'UNKNOWN');
         return Offer::query()
+            ->active()
             ->whereDoesntHave('leads', function ($query) {
                 $query->where('ip', '=', ip());
             })
             ->withCount('leads')
             ->where(function ($query) use ($country) {
                 return $query->whereJsonContains('countries', $country)
-                    ->orWhereJsonLength('countries', 0);
+                    ->orWhereJsonLength('countries', 0)
+                    ->orWhereNull('countries');
             })->when($this->search, function ($query) {
                 return $query->where('title', 'like', '%' . $this->search . '%');
-            })->when($this->sort == 4 || $this->sort == 3, function ($query) {
-                return $query->orderByDesc('is_featured')
-                    ->orderByDesc('is_manual')
+            })->when($this->sort == 3, function ($query) {
+                return $query->where('is_featured', true)
+                    ->orderByDesc('leads_count')
+                    ->orderByDesc('points');
+            })->when($this->sort == 4, function ($query) {
+                return $query->orderByDesc('is_manual')
+                    ->orderByDesc('is_featured')
                     ->orderByDesc('leads_count')
                     ->orderByDesc('points');
             })->when($this->sort == 1, function ($query) {

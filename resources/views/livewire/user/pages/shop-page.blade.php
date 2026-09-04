@@ -42,7 +42,9 @@
 
                             <div class="card-body text-center align-items-center d-flex pb-0 mb-0">
                                 <img src="{{ Storage::url($method->image) }}"
-                                     class="w-100 my-3 object-fit-contain mw-100" alt="">
+                                     class="w-100 my-3 object-fit-contain mw-100"
+                                     onerror="this.onerror=null; this.src='{{ asset('assets/img/icon-light.png') }}';"
+                                     alt="{{ $method->name }}">
                             </div>
 
                             <div class="card-footer text-center px-0 pt-0 mt-0 d-flex justify-content-center">
@@ -123,8 +125,9 @@
                     <h5 class="modal-title d-flex align-items-center justify-content-center">
                         <span class="p-2 rounded-circle d-flex justify-content-center align-items-center"
                               :style="'background: ' + method?.bg_color + '; width: 40px; height: 40px;'">
-                            <img :src="method?.image ? '{{ asset('storage') }}/' + method.image : ''"
+                            <img :src="method?.image ? '{{ asset('storage') }}/' + method.image : '{{ asset('assets/img/icon-light.png') }}'"
                                  :alt="method?.name"
+                                 onerror="this.onerror=null; this.src='{{ asset('assets/img/icon-light.png') }}';"
                                  class="object-fit-contain w-100 h-100">
                         </span>
                         <span class="text-white fw-bolder ms-2"
@@ -162,6 +165,7 @@
                                             <div class="d-flex align-items-center justify-content-between px-3">
                                                 <img :src="'{{ asset('storage') }}/' + method.image"
                                                      :alt="price.price"
+                                                     onerror="this.onerror=null; this.src='{{ asset('assets/img/icon-light.png') }}';"
                                                      class=""
                                                      width="20px"
                                                 >

@@ -5,6 +5,7 @@ namespace App\Filament\Pages\Settings;
 use Closure;
 use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\TagsInput;
@@ -199,6 +200,20 @@ class Settings extends BaseSettings
                                 ->label('Reddit'),
                             TextInput::make('social.discord')
                                 ->label('Discord'),
+                        ]),
+                    Tabs\Tab::make('Notification Tone')
+                        ->schema([
+                            Section::make('Notification Tone Settings')
+                                ->description('Configure or upload sound alerts for offer completions and user balance updates.')
+                                ->schema([
+                                    FileUpload::make('general.notification_sound')
+                                        ->label('Offer Completion Audio File (.mp3, .wav)')
+                                        ->disk('public')
+                                        ->directory('sounds')
+                                        ->acceptedFileTypes(['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/x-wav'])
+                                        ->maxSize(10240)
+                                        ->helperText('Upload a custom audio notification that will play for users when an offer is completed and points are credited. If empty, the default tone at public/assets/sounds/notification.mp3 is used.'),
+                                ]),
                         ]),
                 ])
                 ->persistTabInQueryString(),

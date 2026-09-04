@@ -6,7 +6,7 @@
     <div class="container mx-auto px-4 py-6">
         <div class="mb-6">
             <h1 class="text-2xl font-bold mb-2">Offerwalls</h1>
-            <p class="text-gray-600">Complete offers to earn points for rewards</p>
+            <p class="text-gray-600">Complete offers to earn ERC for rewards</p>
         </div>
 
         <!-- Filters Section -->
@@ -47,10 +47,10 @@
                     <select name="sort" id="sort"
                             class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                         <option value="" {{ !request('sort') ? 'selected' : '' }}>Default</option>
-                        <option value="points_high" {{ request('sort') == 'points_high' ? 'selected' : '' }}>Points
+                        <option value="points_high" {{ request('sort') == 'points_high' ? 'selected' : '' }}>ERC
                             (High to Low)
                         </option>
-                        <option value="points_low" {{ request('sort') == 'points_low' ? 'selected' : '' }}>Points (Low
+                        <option value="points_low" {{ request('sort') == 'points_low' ? 'selected' : '' }}>ERC (Low
                             to High)
                         </option>
                     </select>
@@ -82,7 +82,8 @@
                         <div class="flex p-4">
                             <div class="relative w-[100px] h-[100px] flex-shrink-0 overflow-hidden rounded-md">
                                 <img src="{{ $offer['image'] }}" alt="{{ $offer['title'] }}"
-                                     class="w-full h-full object-cover">
+                                     class="w-full h-full object-cover"
+                                     onerror="this.onerror=null; this.src='{{ asset('assets/img/placeholder-offer.svg') }}';">
                             </div>
                             <div class="ml-4 flex flex-col justify-between flex-grow">
                                 <div>
@@ -113,7 +114,7 @@
                                 @endif
                             </div>
                         </div>
-                        <div class="p-4 pt-0 d-flex flex-col">
+                        <div class="p-4 pt-0">
                             @if(!empty($offer['categories']))
                                 <div class="flex flex-wrap gap-1 mb-3">
                                     @foreach($offer['categories'] as $category)
@@ -126,7 +127,7 @@
 
                             <a href="{{ $offer['url'] }}" target="_blank"
                                class="block w-full bg-primary-600 hover:bg-primary-700 text-white text-center py-2 rounded-md transition-colors duration-300">
-                                Up to  {{ number_format($offer['total_points']) }} Points
+                                Up to  {{ number_format($offer['total_points']) }} ERC
 
                             </a>
                         </div>

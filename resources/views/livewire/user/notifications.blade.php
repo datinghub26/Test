@@ -1,4 +1,4 @@
-<div {{--wire:poll.60s="checkForNewNotifications"--}}
+<div wire:poll.10s="checkForNewNotifications"
     wire:init="loadNotifications"
 >
     <li class="nav-item dropdown-notifications navbar-dropdown dropdown me-3 me-xl-1">

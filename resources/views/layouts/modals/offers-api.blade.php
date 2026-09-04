@@ -41,8 +41,9 @@
                             <!-- Offer Header -->
                             <div class="d-flex">
                                 <div class="position-relative">
-                                    <img :src="offer?.image || ''" width="149"
-                                         style="aspect-ratio: 1 / 1; border-radius: 10px" alt="">
+                                    <img :src="offer?.image || '{{ asset('assets/img/placeholder-offer.svg') }}'" width="149"
+                                         onerror="this.onerror=null; this.src='{{ asset('assets/img/placeholder-offer.svg') }}';"
+                                         style="aspect-ratio: 1 / 1; border-radius: 10px; object-fit: cover" alt="">
 
                                     <!-- Devices -->
                                     <div class="badge bg-label-dark position-absolute"
@@ -79,9 +80,9 @@
                                             <template x-if="is_coin == '1'">
                                                 <span class="d-flex align-items-center fw-medium"
                                                       style="font-size: 13px; line-height: 0">
-                                                    <img src="{{ asset('assets/img/coin.png') }}" alt="" width="12px"
+                                                    <img src="{{ asset('assets/img/coin.png') }}" alt="ERC" width="12px"
                                                          class="me-1">
-                                                    <span x-text="Number(offer?.points).toLocaleString()"></span>
+                                                    <span x-text="Number(offer?.points).toLocaleString() + ' ERC'"></span>
                                                 </span>
                                             </template>
                                         </span>
@@ -132,12 +133,12 @@
                                     <span class="badge bg-label-primary text-center rounded"
                                           style="min-width: 60px; font-size: 11px">
                                         <template x-if="is_coin == '1'">
-                                            <img src="{{ asset('assets/img/coin.png') }}" alt="" width="12px"
+                                            <img src="{{ asset('assets/img/coin.png') }}" alt="ERC" width="12px"
                                                  class="me-1">
                                         </template>
 
                                         <span
-                                            x-text="is_coin == '1' ? Number(event?.points).toLocaleString() : '$' + event?.points.toFixed(2)"></span>
+                                            x-text="is_coin == '1' ? Number(event?.points).toLocaleString() + ' ERC' : '$' + (event?.payout ? Number(event.payout).toFixed(2) : (event?.points / 1000).toFixed(2))"></span>
                                     </span>
                                         <span class="text-body ms-1" x-text="event?.name || ''"></span>
                                     </div>

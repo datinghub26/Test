@@ -52,11 +52,62 @@ class Notifications extends Component
         if (!auth()->check())
             return;
 
-        $unNotifiedNotificationsCount = auth()->user()->alerts()->where('is_notified', 0)->count();
-        if ($unNotifiedNotificationsCount > 0) {
+        $unNotified = auth()->user()->alerts()->where('is_notified', 0)->get();
+        if ($unNotified->isNotEmpty()) {
             $this->loadNotifications();
-            Toaster::success("You have a $unNotifiedNotificationsCount new notifications");
-            auth()->user()->alerts()->update(['is_notified' => 1]);
+            $shouldUpdateBalance = false;
+
+            foreach ($unNotified as $notification) {
+                $type = strtolower($notification->type ?? '');
+                $title = strtolower($notification->title ?? '');
+
+                // 1. Offer complete
+                $isOfferComplete = in_array($type, ['offer_completed', 'offer_approved'])
+                    || str_contains($title, 'offer completed')
+                    || str_contains($title, 'offer approved');
+
+                // 2. Make withdrawal request
+                $isWithdrawRequest = in_array($type, ['cashout_submitted', 'withdraw_request'])
+                    || str_contains($title, 'withdraw request')
+                    || str_contains($title, 'withdrawal request');
+
+                // 3. After making the payment (Withdrawal Approved / Processed)
+                $isPaymentMade = in_array($type, ['cashout_approved', 'withdrawal_approved', 'payment_completed'])
+                    || str_contains($title, 'withdrawal request approved')
+                    || str_contains($title, 'cashout approved')
+                    || str_contains($title, 'cashout processed');
+
+                // 4. After chargeback
+                $isChargeback = in_array($type, ['chargeback', 'offer_chargeback'])
+                    || str_contains($title, 'chargeback')
+                    || str_contains($title, 'charge back');
+
+                if ($isOfferComplete) {
+                    $shouldUpdateBalance = true;
+                    Toaster::success($notification->message);
+                    $this->dispatch('play-notification-sound', id: 'notif_' . $notification->id);
+                } elseif ($isWithdrawRequest) {
+                    $shouldUpdateBalance = true;
+                    Toaster::info($notification->message);
+                    $this->dispatch('play-notification-sound', id: 'notif_' . $notification->id);
+                } elseif ($isPaymentMade) {
+                    $shouldUpdateBalance = true;
+                    Toaster::success($notification->message);
+                    $this->dispatch('play-notification-sound', id: 'notif_' . $notification->id);
+                } elseif ($isChargeback) {
+                    $shouldUpdateBalance = true;
+                    Toaster::error($notification->message);
+                    $this->dispatch('play-notification-sound', id: 'notif_' . $notification->id);
+                } else {
+                    Toaster::info($notification->message);
+                }
+            }
+
+            if ($shouldUpdateBalance) {
+                $this->dispatch('update-balance', balance: (float) auth()->user()->fresh()->points);
+            }
+
+            auth()->user()->alerts()->where('is_notified', 0)->update(['is_notified' => 1]);
         }
     }
 

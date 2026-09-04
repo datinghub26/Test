@@ -41,9 +41,6 @@
 @endassets
 
 <div wire:poll.20s>
-    <!-- Audio player for live payouts and withdrawals -->
-    <audio id="coinWithdrawAudio" src="{{ asset('assets/sounds/coin-withdraw.mp3') }}" preload="auto"></audio>
-
     <div class="container-fluid" x-data="{ lastCount: {{ count($cashouts) }} }">
         <div class="d-flex justify-content-start mt-2 small align-items-center">
             <div class="card text-white me-2 py-2 px-3 border-0 shadow-sm" style="background: var(--bs-card-bg);">
@@ -66,7 +63,7 @@
                              tooltip="true"
                              data-bs-html="true"
                              data-bs-placement="bottom"
-                             title="<div class='text-start text-body'><p class='m-0'>Username: {{ $withdrawal->user->username ?? 'Anonymous' }}</p> <p class='m-0'>Name: {{ $withdrawal->name }}</p> <p class='m-0'>Amount: {{ $withdrawal->amount }} Points</p> </div>">
+                             title="<div class='text-start text-body'><p class='m-0'>Username: {{ $withdrawal->user->username ?? 'Anonymous' }}</p> <p class='m-0'>Name: {{ $withdrawal->name }}</p> <p class='m-0'>Amount: {{ $withdrawal->amount }} ERC</p> </div>">
                             <div class="card-body p-0 pb-0 text-center"
                                  @click="$dispatch('activity-open', {user_id: '{{ $withdrawal->user_id }}'})">
                                 <div class="d-flex justify-content-center align-items-center gap-2">
@@ -78,6 +75,7 @@
                                             width="100%"
                                             @class(['object-fit-contain', 'p-1' => $withdrawal instanceof \App\Models\CashoutRequest])
                                             src="{{ $withdrawal->method_image ? \Storage::url($withdrawal->method_image) : ($withdrawal->user ? $withdrawal->user->avatar() : asset('assets/img/icon-light.png')) }}"
+                                            onerror="this.onerror=null; this.src='{{ asset('assets/img/icon-light.png') }}';"
                                             alt="{{ $withdrawal->name }}">
                                     </div>
                                     <div class="d-flex flex-column text-start align-items-start">
@@ -92,9 +90,9 @@
                                             <img src="{{ asset('assets/img/coin.png') }}"
                                                  x-show="is_coin == '1'"
                                                  width="11px"
-                                                 alt="Coin">
+                                                 alt="ERC">
                                             <span
-                                                x-text="is_coin == '1' ? '{{ number_format($withdrawal->amount) }}' : '{{ '$' . to_money_str($withdrawal->amount) }}'"></span>
+                                                x-text="is_coin == '1' ? '{{ number_format($withdrawal->amount) }} ERC' : '{{ '$' . to_money_str($withdrawal->amount) }}'"></span>
                                         </span>
                                     </div>
                                 </div>
@@ -109,33 +107,8 @@
 
 @script
 <script>
-    let firstLiveLoad = true;
-
-    function playPayoutAudio() {
-        try {
-            const audio = document.getElementById('coinWithdrawAudio');
-            if (audio) {
-                audio.volume = 0.35;
-                const promise = audio.play();
-                if (promise !== undefined) {
-                    promise.catch(() => {
-                        // Browser autoplay policy prevented playback; will play after user interaction
-                    });
-                }
-            }
-        } catch (e) {
-            console.warn('Audio play notice:', e);
-        }
-    }
-
     window.addEventListener('render-live-cashouts', () => {
         try {
-            // Trigger sound on new update if not initial page load
-            if (!firstLiveLoad) {
-                playPayoutAudio();
-            }
-            firstLiveLoad = false;
-
             document.querySelectorAll('.tooltip').forEach((el) => {
                 el.remove();
             });

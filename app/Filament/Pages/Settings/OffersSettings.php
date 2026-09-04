@@ -19,7 +19,7 @@ class OffersSettings extends BaseSettings
     protected static ?string $navigationLabel = 'Config';
     protected static ?string $navigationGroup = 'Offers';
 
-    protected static bool $shouldRegisterNavigation = false;
+    protected static bool $shouldRegisterNavigation = true;
 
     public static function getNavigationLabel(): string
     {
@@ -36,6 +36,32 @@ class OffersSettings extends BaseSettings
         return [
             Tabs::make('Offers')
                 ->schema([
+                    Tabs\Tab::make('Top Offers')
+                        ->schema([
+                            \Filament\Forms\Components\Select::make('top_offers.mode')
+                                ->label('Top Offers Mode')
+                                ->options([
+                                    'hybrid' => 'Hybrid (Manual Offers First + Auto Remaining)',
+                                    'auto' => 'Automatic (Highest Performance Data)',
+                                    'manual' => 'Manual (Only Admin Selected Offers)',
+                                ])
+                                ->default('hybrid')
+                                ->helperText('Choose whether Top Offers are chosen automatically, manually by admin, or hybrid.'),
+                            TextInput::make('top_offers.limit')
+                                ->label('Maximum Offers Displayed')
+                                ->numeric()
+                                ->default(6)
+                                ->helperText('The maximum number of offers shown in the Top Offers section.'),
+                            \Filament\Forms\Components\Select::make('top_offers.ranking_metric')
+                                ->label('Automatic Ranking Metric')
+                                ->options([
+                                    'conversions' => 'Most Completed (Conversions)',
+                                    'points' => 'Highest ERC Reward',
+                                    'payout' => 'Highest Publisher Payout',
+                                ])
+                                ->default('conversions')
+                                ->helperText('The metric used to rank top converting offers in automatic or hybrid mode.'),
+                        ]),
                     Tabs\Tab::make('AdGate')
                         ->schema([
                             Checkbox::make('offers.adgatemedia.enabled')

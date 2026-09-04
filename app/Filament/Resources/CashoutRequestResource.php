@@ -111,6 +111,11 @@ class CashoutRequestResource extends Resource
                     ->requiresConfirmation()
                     ->action(function (CashoutRequest $record) {
                         $record->update(['status' => 'approved']);
+                        $record->user?->addNotification(
+                            'Withdrawal Request Approved',
+                            "Your cashout request of {$record->amount} ERC via {$record->method_name} has been processed successfully.",
+                            'cashout_approved'
+                        );
                     }),
                 Tables\Actions\Action::make('reject')
                     ->fillForm(fn(CashoutRequest $record): array => ['rejection_reason' => $record->rejection_reason])
@@ -131,7 +136,7 @@ class CashoutRequestResource extends Resource
                         if ($data['refund'] === true) {
                             $record->user->updateUserPointsAndLevel($record->amount);
                         }
-                        $record->user->addNotification('Withdrawal Request Rejected', "Your withdrawal request has been rejected.", 'error');
+                        $record->user?->addNotification('Withdrawal Request Rejected', "Your withdrawal request for {$record->amount} ERC has been rejected.", 'danger');
                         $record->save();
                     }),
             ])
@@ -142,7 +147,14 @@ class CashoutRequestResource extends Resource
                         ->requiresConfirmation()
                         ->color('success')
                         ->icon('heroicon-o-check')
-                        ->action(fn(Collection $records) => $records->each(fn(CashoutRequest $record) => $record->update(['status' => 'approved']))),
+                        ->action(fn(Collection $records) => $records->each(function (CashoutRequest $record) {
+                            $record->update(['status' => 'approved']);
+                            $record->user?->addNotification(
+                                'Withdrawal Request Approved',
+                                "Your cashout request of {$record->amount} ERC via {$record->method_name} has been processed successfully.",
+                                'cashout_approved'
+                            );
+                        })),
                     Tables\Actions\BulkAction::make('reject')
                         ->requiresConfirmation()
                         ->color('danger')
@@ -161,7 +173,7 @@ class CashoutRequestResource extends Resource
                                 if ($data['refund'] === true) {
                                     $record->user->updateUserPointsAndLevel($record->amount);
                                 }
-                                $record->user->addNotification('Withdrawal Request Rejected', "Your withdrawal request has been rejected.", 'error');
+                                $record->user?->addNotification('Withdrawal Request Rejected', "Your withdrawal request for {$record->amount} ERC has been rejected.", 'danger');
                                 $record->save();
                             });
 

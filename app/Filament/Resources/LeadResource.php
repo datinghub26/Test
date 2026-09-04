@@ -126,6 +126,11 @@ class LeadResource extends Resource
                         ->action(function ($record) {
                             $record->update(['status' => 'approved']);
                             $record->user->updateUserPointsAndLevel($record->points);
+                            $record->user->addNotification(
+                                'Offer Completed',
+                                "Your offer '{$record->name}' was approved and {$record->points} ERC credited!",
+                                'offer_completed'
+                            );
                         })
                         ->requiresConfirmation()
                         ->color('success')
@@ -249,5 +254,11 @@ class LeadResource extends Resource
 
         if ($data['ban'] === true)
             $record->user->update(['is_banned' => true]);
+
+        $record->user->addNotification(
+            'Offer Chargeback',
+            "Offer '{$record->name}' was marked as {$data['type']}. {$record->points} ERC deducted.",
+            'chargeback'
+        );
     }
 }

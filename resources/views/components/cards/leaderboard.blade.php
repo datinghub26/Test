@@ -25,7 +25,7 @@
     </div>
 
     <p class="mt-3 mb-0 f-md text-break">{{ $leader->user->username }}</p>
-    <p class="text-primary mt-1 f-md">{{$leader->points }}</p>
+    <p class="text-primary mt-1 f-md">{{ number_format($leader->points) }} ERC</p>
     <span class="badge bg-dark align-items-center justify-content-between px-2 d-none d-md-flex">
         <span @class(['badge bg-label-warning' => $rank == 1,'badge bg-label-secondary' => $rank == 2,'badge bg-label-primary' => $rank == 3])>
             {{ $rank }}

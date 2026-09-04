@@ -49,6 +49,11 @@ class ReleasePendingOffers extends Command
 
                     if ($lead->user) {
                         $lead->user->updateUserPointsAndLevel(floatval($lead->points));
+                        $lead->user->addNotification(
+                            'Offer Completed',
+                            "Your pending offer '{$lead->name}' was approved and {$lead->points} ERC credited!",
+                            'offer_completed'
+                        );
                     }
 
                     $releasedCount++;

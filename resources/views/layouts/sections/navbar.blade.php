@@ -49,11 +49,11 @@
                               x-data="{ balance: '{{ round(auth()->user()->points, 2) }}' }"
                               x-on:update-balance.window="balance = $event.detail.balance;">
 
-                            <img src="{{ asset('assets/img/coin.png') }}" alt="" width="10" class="me-1"
+                            <img src="{{ asset('assets/img/coin.png') }}" alt="ERC" width="10" class="me-1"
                                  x-show="is_coin == '1'">
                             <i class="fa-solid fa-dollar-sign me-1" x-show="is_coin == '0'"></i>
                             <span
-                                x-text="is_coin == '1' ? Number(balance).toLocaleString() : Number(balance / 1000).toFixed(2)"></span>
+                                x-text="is_coin == '1' ? Number(balance).toLocaleString() + ' ERC' : '$' + Number(balance / 1000).toFixed(2)"></span>
 
 
                             <x-heroicon-s-credit-card class=" ms-2" width="20px"/>
@@ -152,7 +152,7 @@
                                     $dispatch('update-coins', { isCoin: this.isCoin });
                                  }
                           }">
-                            <span class="switch-label">Show USD</span>
+                            <span class="switch-label" x-text="isCoin === '1' ? 'Show USD' : 'Show ERC'">Show USD</span>
                             <label class="switch switch-primary f-md">
                                 <input type="checkbox" class="switch-input" :checked="isCoin === '0'"
                                        @change="toggleSwitch()"/>

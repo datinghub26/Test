@@ -182,6 +182,11 @@ abstract class Postback
                 ]);
 
                 $lead->user->updateUserPointsAndLevel($lead->points * -1);
+                $lead->user->addNotification(
+                    'Offer Chargeback',
+                    "Chargeback: {$lead->points} ERC was deducted for '{$lead->name}'.",
+                    'chargeback'
+                );
                 return;
             }
         }
@@ -199,6 +204,11 @@ abstract class Postback
 
         $reduction_points = abs(floatval($data['amount'])) * -1;
         $user->updateUserPointsAndLevel($reduction_points);
+        $user->addNotification(
+            'Offer Chargeback',
+            "Chargeback: " . abs(floatval($data['amount'])) . " ERC was deducted for '{$this->getHandledName($data)}'.",
+            'chargeback'
+        );
     }
 
     protected function applyPending(&$data)
@@ -248,6 +258,20 @@ abstract class Postback
             'release_at' => $data['release_at'] ?? null,
             'hold_duration_days' => $data['hold_duration_days'] ?? null,
         ]);
+
+        if (!isset($data['pending'])) {
+            $user->addNotification(
+                'Offer Completed',
+                "You earned {$data['amount']} ERC for completing '{$this->getHandledName($data)}'!",
+                'offer_completed'
+            );
+        } else {
+            $user->addNotification(
+                'Offer Pending',
+                "Your offer '{$this->getHandledName($data)}' is pending review.",
+                'warning'
+            );
+        }
     }
 
     protected function increasePoints($data)

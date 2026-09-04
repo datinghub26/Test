@@ -51,7 +51,8 @@
                                  style="background: conic-gradient(var(--bs-primary) 0% {{ $progress }}%, var(--bs-dark) {{ $progress }}% 100%);">
                                 <img src="{{ $user?->avatar() }}" alt="{{ $user?->username }}"
                                      class="rounded-circle"
-                                     style="width: 100px;">
+                                     style="width: 100px;"
+                                     onerror="this.onerror=null;this.src='{{ asset('assets/avatars/memoji_1.png') }}';">
                             </div>
                             <div class="mt-2">
                                 <span class="badge bg-primary">Level {{ $user?->level }}</span>
@@ -67,6 +68,7 @@
                 </div>
                 <div class="modal-body">
                     <hr>
+
                     <div class="row text-center">
                         <h5 class="fw-bold text-start text-white">
                             <i class="fa-solid fa-chart-simple text-secondary me-2"></i> Stats
@@ -78,8 +80,8 @@
                                 <span>{{ $user?->leads->count() }}</span>
                             </div>
                             <div class="col">
-                                <h6 class="mb-2">Coins Earned</h6>
-                                <p>{{ $user?->leads->sum('points') }}</p>
+                                <h6 class="mb-2">ERC Earned</h6>
+                                <p>{{ number_format($user?->leads->sum('points') ?? 0) }} ERC</p>
                             </div>
                             <div class="col">
                                 <h6 class="mb-2">Users Referred</h6>
@@ -122,7 +124,8 @@
                                             <td class="d-flex align-items-center gap-2">
                                                 @if($lead->image)
                                                     <img src="{{ $lead->image }}" alt="{{ $lead->name }}"
-                                                         class="rounded-3" style="width: 30px;">
+                                                         class="rounded-3" style="width: 30px;"
+                                                         onerror="this.onerror=null; this.src='{{ asset('assets/img/placeholder-offer.svg') }}';">
                                                 @else
                                                     <div
                                                         class="bg-label-primary bg-opacity-50 rounded-3  d-flex align-items-center"
@@ -136,8 +139,8 @@
                                             <td class="text-truncate">{{ $lead->created_at->diffForHumans() }}</td>
                                             <td class="text-truncate">
                                                 <img src="{{ asset('assets/img/coin.png') }}" style="width: 12px;"
-                                                     alt="">
-                                                <span class="fw-bold">{{ $lead->points }}</span>
+                                                     alt="ERC">
+                                                <span class="fw-bold">{{ number_format($lead->points) }} ERC</span>
                                             </td>
                                         </tr>
                                     @empty

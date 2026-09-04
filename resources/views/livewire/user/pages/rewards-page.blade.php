@@ -18,7 +18,7 @@
 
                         <span class="small text-secondary fw-normal">
                         <span class="text-primary">Earn <span
-                                x-text="is_coin == '1' ? '{{ setting('streaks.required_points', 1000) }} Points' : '${{ to_money_str(setting('streaks.required_points', 1000)) }}' "></span> </span>or more within <span
+                                x-text="is_coin == '1' ? '{{ number_format(setting('streaks.required_points', 1000)) }} ERC' : '${{ to_money_str(setting('streaks.required_points', 1000)) }}' "></span> </span>or more within <span
                                 class="text-primary">{{ setting('streaks.required_hours', 24) }} hours</span> to keep your streak
                     </span>
                     </div>
@@ -29,7 +29,7 @@
                                     <div class="card-body">
                                         <i class="fa-regular fa-clock text-body mb-2"></i>
                                         <h5 class="text-white mb-1">Day {{ $streak->day }}</h5>
-                                        <p>{{ $streak->points }} Points</p>
+                                        <p>{{ number_format($streak->points) }} ERC</p>
                                         <button
                                             @class(['btn btn-secondary btn-sm py-1 px-2',
                                                     'disabled' => !$this->isUserCanClaimStreak($streak->id),
@@ -59,7 +59,7 @@
 
                             <span class="small text-body fw-normal ">
                             Earn <span
-                                    class="text-primary fw-bold"> {{ setting('streaks.required_points', 1000) }} more coins today</span> to keep your streak! Time left
+                                    class="text-primary fw-bold"> {{ number_format(setting('streaks.required_points', 1000)) }} more ERC today</span> to keep your streak! Time left
                             <span class="text-primary fw-bold" @if(!$this->isUserFirstStreak()) x-text="timeLeft" @endif>
                                 24h
                             </span>

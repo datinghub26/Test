@@ -6,7 +6,7 @@
 ])
 
 <div class="d-flex align-items-center">
-    <img x-show="is_coin == '1'" src="{{ asset('assets/img/coin.png') }}" alt="" width="{{ $size }}" class="me-1">
-    <span x-text="is_coin == '1' ? '{{ number_format($coins) }}' : '${{ to_money_str($coins) }}'"
+    <img x-show="is_coin == '1'" src="{{ asset('assets/img/coin.png') }}" alt="ERC" width="{{ $size }}" class="me-1">
+    <span x-text="is_coin == '1' ? '{{ number_format($coins) }} ERC' : '${{ to_money_str($coins) }}'"
           style="font-size: {{ $size }}"></span>
 </div>
