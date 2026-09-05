@@ -59,7 +59,7 @@ class ShopPage extends Component
 
         $cashout = auth()->user()->cashouts()->create([
             'method_name' => $this->selectedMethod->name,
-            'method_image' => $this->selectedMethod->image,
+            'method_image' => $this->selectedMethod->image ?? 'assets/img/icon-light.png',
             'address' => $this->address,
             'amount' => $amount,
         ]);
