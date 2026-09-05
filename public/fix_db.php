@@ -37,6 +37,17 @@ foreach ($lines as $line) {
     $env[trim($key)] = trim(trim($val), '"\'');
 }
 
+// Auto-fix APP_URL and FILESYSTEM_DISK in .env if mismatched
+$envContent = file_get_contents($envFile);
+$newEnv = preg_replace('/^APP_URL=.*/m', 'APP_URL=https://earnrewardcash.com', $envContent);
+$newEnv = preg_replace('/^FILESYSTEM_DISK=.*/m', 'FILESYSTEM_DISK=public', $newEnv);
+if ($newEnv !== $envContent) {
+    file_put_contents($envFile, $newEnv);
+    $env['APP_URL'] = 'https://earnrewardcash.com';
+    $env['FILESYSTEM_DISK'] = 'public';
+    echo "<h4 style='color:green;'>Updated .env: set APP_URL=https://earnrewardcash.com and FILESYSTEM_DISK=public</h4>";
+}
+
 echo "<h3>public_html files:</h3><pre>";
 foreach (scandir(__DIR__) as $f) {
     if ($f === '.' || $f === '..') continue;
@@ -46,6 +57,30 @@ foreach (scandir(__DIR__) as $f) {
 }
 if (file_exists(__DIR__ . '/.htaccess')) {
     echo "\n--- .htaccess content ---\n" . htmlspecialchars(file_get_contents(__DIR__ . '/.htaccess'));
+}
+echo "</pre>";
+
+echo "APP_URL in .env: <b>" . htmlspecialchars($env['APP_URL'] ?? 'NOT SET') . "</b><br>";
+echo "HTTP_HOST: <b>" . htmlspecialchars($_SERVER['HTTP_HOST'] ?? 'CLI') . "</b><br>";
+
+// Ensure livewire-tmp directories exist and are writable
+$livewireTmp1 = $gtpDir . '/storage/app/livewire-tmp';
+$livewireTmp2 = $gtpDir . '/storage/app/public/livewire-tmp';
+@mkdir($livewireTmp1, 0777, true);
+@chmod($livewireTmp1, 0777);
+@mkdir($livewireTmp2, 0777, true);
+@chmod($livewireTmp2, 0777);
+echo "livewire-tmp check: local exists=" . (is_dir($livewireTmp1) ? 'YES' : 'NO') . " writable=" . (is_writable($livewireTmp1) ? 'YES' : 'NO') . "<br>";
+echo "livewire-tmp check: public exists=" . (is_dir($livewireTmp2) ? 'YES' : 'NO') . " writable=" . (is_writable($livewireTmp2) ? 'YES' : 'NO') . "<br>";
+
+$logFile = $gtpDir . '/storage/logs/laravel.log';
+echo "<h3>Recent Laravel Log Errors:</h3><pre>";
+if (file_exists($logFile)) {
+    $lines = file($logFile);
+    $lastLines = array_slice($lines, -60);
+    echo htmlspecialchars(implode("", $lastLines));
+} else {
+    echo "laravel.log does not exist at $logFile\n";
 }
 echo "</pre>";
 

@@ -22,6 +22,15 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         try {
+            if (!app()->runningInConsole() && !empty($_SERVER['HTTP_HOST'])) {
+                $currentUrl = 'https://' . $_SERVER['HTTP_HOST'];
+                config(['app.url' => $currentUrl]);
+                \Illuminate\Support\Facades\URL::forceRootUrl($currentUrl);
+                \Illuminate\Support\Facades\URL::forceScheme('https');
+            } elseif (app()->environment('production') || str_contains(config('app.url'), 'https://')) {
+                \Illuminate\Support\Facades\URL::forceScheme('https');
+            }
+
             config([
                 'services.google.client_id' => setting('services.google.client_id') ?? config('services.google.client_id'),
                 'services.google.client_secret' => setting('services.google.client_secret') ?? config('services.google.client_secret'),

@@ -51,7 +51,7 @@ class ProviderResource extends Resource
                     ->directory('providers')
                     ->visibility('public')
                     ->image()
-                    ->required()
+                    ->required(fn(string $context): bool => $context === 'create')
                     ->columnSpanFull(),
                 Forms\Components\TextInput::make('badge')
                     ->helperText('Badge shown on the top right corner of the offer card')
