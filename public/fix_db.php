@@ -43,29 +43,47 @@ $pass = $env['DB_PASSWORD'] ?? '';
 $db = $env['DB_DATABASE'] ?? '';
 $port = (int)($env['DB_PORT'] ?? 3306);
 
-$conn = new mysqli($host, $user, $pass, $db, $port);
-if ($conn->connect_error) {
-    die("MySQL Connection failed: " . $conn->connect_error);
+try {
+    $conn = new PDO("mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4", $user, $pass, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
+} catch (PDOException $e) {
+    die("PDO Connection failed: " . $e->getMessage());
 }
 
-
 // 1. Alter notifications table
-$res = $conn->query("SHOW COLUMNS FROM `notifications` LIKE 'notifiable_type'");
-if ($res && $res->num_rows == 0) {
+$stmt = $conn->query("SHOW COLUMNS FROM `notifications` LIKE 'notifiable_type'");
+$col = $stmt->fetch();
+if (!$col) {
     $sql = "ALTER TABLE `notifications` 
             ADD COLUMN `notifiable_type` VARCHAR(255) NULL AFTER `user_id`,
             ADD COLUMN `notifiable_id` BIGINT UNSIGNED NULL AFTER `notifiable_type`,
             ADD COLUMN `data` LONGTEXT NULL AFTER `notifiable_id`,
             ADD COLUMN `read_at` TIMESTAMP NULL AFTER `data`,
             ADD INDEX `notifications_notifiable_index` (`notifiable_type`, `notifiable_id`)";
-    if ($conn->query($sql) === TRUE) {
-        echo "<h3 style='color:green;'>SUCCESS: Added notifiable_type, notifiable_id, data, read_at columns to notifications table!</h3>";
-    } else {
-        echo "<h3 style='color:red;'>Error updating table: " . $conn->error . "</h3>";
-    }
+    $conn->exec($sql);
+    echo "<h3 style='color:green;'>SUCCESS: Added notifiable_type, notifiable_id, data, read_at columns to notifications table!</h3>";
 } else {
     echo "<h3 style='color:green;'>Columns already exist in notifications table.</h3>";
 }
+
+// Diagnostic: Show cashout_methods
+echo "<h4>Cashout Methods:</h4><ul>";
+$methodsStmt = $conn->query("SELECT id, name, image, category, is_active FROM `cashout_methods`");
+while ($row = $methodsStmt->fetch()) {
+    echo "<li>ID: {$row['id']} | Name: <b>{$row['name']}</b> | Image: <code>" . htmlspecialchars($row['image'] ?? 'NULL') . "</code> | Category: {$row['category']} | Active: {$row['is_active']}</li>";
+}
+echo "</ul>";
+
+// Diagnostic: Show providers
+echo "<h4>Providers:</h4><ul>";
+$provStmt = $conn->query("SELECT id, name, image, is_active FROM `providers`");
+while ($row = $provStmt->fetch()) {
+    echo "<li>ID: {$row['id']} | Name: <b>{$row['name']}</b> | Image: <code>" . htmlspecialchars($row['image'] ?? 'NULL') . "</code> | Active: {$row['is_active']}</li>";
+}
+echo "</ul>";
+
 
 // 2. Remove bootstrap/cache/filament
 $cacheDir = $gtpDir . '/bootstrap/cache/filament';
@@ -107,23 +125,56 @@ if (!is_dir($publicAppDir)) {
 $copied = 0;
 $foundFiles = [];
 
+// Subdirectories to specifically ensure exist in both storage locations
+foreach (['methods', 'providers', 'sounds', 'avatars'] as $sub) {
+    @mkdir($publicAppDir . '/' . $sub, 0755, true);
+    if (is_dir($pubStorage)) {
+        @mkdir($pubStorage . '/' . $sub, 0755, true);
+    }
+}
+
 if (is_dir($appDir)) {
     $iterator = new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator($appDir, RecursiveDirectoryIterator::SKIP_DOTS)
     );
     foreach ($iterator as $file) {
         if ($file->isFile()) {
+            $pathname = $file->getPathname();
             $filename = $file->getFilename();
             $ext = strtolower($file->getExtension());
             if (in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif', 'mp3', 'ico'])) {
-                $foundFiles[] = $file->getPathname();
-                $dest1 = $pubStorage . '/' . $filename;
-                $dest2 = $publicAppDir . '/' . $filename;
-                if (!file_exists($dest1) || filesize($dest1) === 0) {
-                    if (@copy($file->getPathname(), $dest1)) $copied++;
+                $foundFiles[] = $pathname;
+
+                // Determine relative path relative to app or public
+                $relFromApp = ltrim(str_replace(['\\', $appDir], ['/', ''], $pathname), '/');
+                $relFromPublic = ltrim(str_replace(['\\', $publicAppDir], ['/', ''], $pathname), '/');
+
+                // Candidates for destination
+                $dests = [
+                    $pubStorage . '/' . $filename,
+                    $publicAppDir . '/' . $filename,
+                    $pubStorage . '/' . $relFromPublic,
+                    $publicAppDir . '/' . $relFromPublic,
+                ];
+
+                // If file is inside a subfolder like methods/ or providers/
+                foreach (['methods', 'providers', 'sounds', 'avatars'] as $sub) {
+                    if (str_contains($pathname, DIRECTORY_SEPARATOR . $sub . DIRECTORY_SEPARATOR) || str_contains($pathname, '/' . $sub . '/')) {
+                        $dests[] = $pubStorage . '/' . $sub . '/' . $filename;
+                        $dests[] = $publicAppDir . '/' . $sub . '/' . $filename;
+                    }
                 }
-                if (!file_exists($dest2) || filesize($dest2) === 0) {
-                    @copy($file->getPathname(), $dest2);
+
+                foreach (array_unique($dests) as $dest) {
+                    $parent = dirname($dest);
+                    if (!is_dir($parent)) {
+                        @mkdir($parent, 0755, true);
+                    }
+                    if (!file_exists($dest) || filesize($dest) === 0) {
+                        if (@copy($pathname, $dest)) {
+                            $copied++;
+                        }
+                    }
                 }
             }
         }

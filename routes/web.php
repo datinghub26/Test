@@ -80,6 +80,11 @@ Route::get('/storage/{path}', function ($path) {
         storage_path('app/methods/' . basename($path)),
         storage_path('app/sounds/' . basename($path)),
         public_path('storage/' . $path),
+        public_path('storage/' . basename($path)),
+        dirname(base_path()) . '/public_html/storage/' . $path,
+        dirname(base_path()) . '/public_html/storage/' . basename($path),
+        '/home/earneslx/public_html/storage/' . $path,
+        '/home/earneslx/public_html/storage/' . basename($path),
     ];
     $filePath = null;
     foreach ($candidates as $candidate) {

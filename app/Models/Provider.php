@@ -48,13 +48,17 @@ class Provider extends Model
     {
         return Attribute::make(
             get: function () {
-                if (!$this->image) {
+                if (empty($this->image)) {
                     return asset('assets/img/placeholder-provider.svg');
                 }
                 if (str_starts_with($this->image, 'http://') || str_starts_with($this->image, 'https://')) {
                     return $this->image;
                 }
-                return \Illuminate\Support\Facades\Storage::disk('public')->url($this->image);
+                $cleaned = ltrim($this->image, '/');
+                if (str_starts_with($cleaned, 'storage/')) {
+                    $cleaned = substr($cleaned, 8);
+                }
+                return \Illuminate\Support\Facades\Storage::disk('public')->url($cleaned);
             }
         );
     }
