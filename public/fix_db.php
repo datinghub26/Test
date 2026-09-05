@@ -182,6 +182,27 @@ if (is_dir($appDir)) {
 }
 
 echo "Storage sync: Found " . count($foundFiles) . " media files. Copied $copied files to public_html/storage.<br>";
+
+// Search for 01KY files across home directory
+echo "<h4>Search for 01KY files:</h4><pre>";
+$searchCmd = "find /home/earneslx -name '*01KY*' 2>/dev/null";
+$searchOutput = shell_exec($searchCmd);
+echo htmlspecialchars($searchOutput ?: "No 01KY files found with find command.\n");
+
+// Also check where Livewire / Filament stores temporary uploads
+$livewireDirs = [
+    $gtpDir . '/storage/app/livewire-tmp',
+    $gtpDir . '/storage/app/public/livewire-tmp',
+    '/home/earneslx/tmp',
+    sys_get_temp_dir(),
+];
+foreach ($livewireDirs as $ld) {
+    if (is_dir($ld)) {
+        echo "Dir $ld exists. Files: " . count(scandir($ld)) . "\n";
+    }
+}
+echo "</pre>";
+
 if (!empty($foundFiles)) {
     echo "<details><summary>View synced files (" . count($foundFiles) . ")</summary><pre>" . htmlspecialchars(implode("\n", $foundFiles)) . "</pre></details>";
 }
