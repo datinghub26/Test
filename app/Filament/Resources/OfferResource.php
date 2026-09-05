@@ -137,30 +137,89 @@ class OfferResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_manual')
                     ->label('Manual Override'),
                 Tables\Filters\SelectFilter::make('provider')
-                    ->options(Offer::query()->pluck('provider')->flatten()->unique()->mapWithKeys(fn($provider) => [$provider => $provider])),
+                    ->options(fn () => Offer::query()
+                        ->whereNotNull('provider')
+                        ->where('provider', '!=', '')
+                        ->distinct()
+                        ->pluck('provider')
+                        ->filter(fn($val) => !blank($val))
+                        ->mapWithKeys(fn($provider) => [(string) $provider => (string) $provider])
+                        ->toArray()
+                    ),
                 Tables\Filters\SelectFilter::make('devices')
-                    ->options(Offer::query()->pluck('devices')->flatten()->unique()->mapWithKeys(fn($device) => [$device => $device]))
+                    ->options(fn () => Offer::query()
+                        ->whereNotNull('devices')
+                        ->pluck('devices')
+                        ->flatMap(function ($item) {
+                            if (is_string($item)) {
+                                $decoded = json_decode($item, true);
+                                return is_array($decoded) ? $decoded : [$item];
+                            }
+                            return is_array($item) ? $item : [$item];
+                        })
+                        ->filter(fn($val) => !blank($val))
+                        ->unique()
+                        ->mapWithKeys(fn($device) => [(string) $device => ucfirst((string) $device)])
+                        ->toArray()
+                    )
                     ->query(function (Builder $query, array $data) {
-                        return $data['value'] ? $query->whereJsonContains('devices', $data['value']) : $query;
+                        return !blank($data['value'] ?? null) ? $query->whereJsonContains('devices', $data['value']) : $query;
                     }),
                 Tables\Filters\SelectFilter::make('categories')
-                    ->options(Offer::query()->pluck('categories')->flatten()->unique()->mapWithKeys(fn($device) => [$device => $device]))
+                    ->options(fn () => Offer::query()
+                        ->whereNotNull('categories')
+                        ->pluck('categories')
+                        ->flatMap(function ($item) {
+                            if (is_string($item)) {
+                                $decoded = json_decode($item, true);
+                                return is_array($decoded) ? $decoded : [$item];
+                            }
+                            return is_array($item) ? $item : [$item];
+                        })
+                        ->filter(fn($val) => !blank($val))
+                        ->unique()
+                        ->mapWithKeys(fn($category) => [(string) $category => (string) $category])
+                        ->toArray()
+                    )
                     ->query(function (Builder $query, array $data) {
-                        return $data['value'] ? $query->whereJsonContains('categories', $data['value']) : $query;
+                        return !blank($data['value'] ?? null) ? $query->whereJsonContains('categories', $data['value']) : $query;
                     }),
                 Tables\Filters\SelectFilter::make('countries')
                     ->options(function () {
-                        $countries = Offer::query()->pluck('countries')->flatten()->unique();
-                        return $countries->mapWithKeys(function ($country) {
-                            if ($country == 'all' || $country == 'ALL' || $country == null) {
-                                return ['ALL' => 'ALL'];
-                            }
-
-                            return [$country => $country];
-                        });
+                        return Offer::query()
+                            ->whereNotNull('countries')
+                            ->pluck('countries')
+                            ->flatMap(function ($item) {
+                                if (is_string($item)) {
+                                    $decoded = json_decode($item, true);
+                                    return is_array($decoded) ? $decoded : [$item];
+                                }
+                                return is_array($item) ? $item : [$item];
+                            })
+                            ->filter(fn($val) => !blank($val))
+                            ->unique()
+                            ->mapWithKeys(function ($country) {
+                                $c = trim((string) $country);
+                                if (strtolower($c) === 'all') {
+                                    return ['ALL' => 'ALL'];
+                                }
+                                return [$c => strtoupper($c)];
+                            })
+                            ->toArray();
                     })
                     ->query(function (Builder $query, array $data) {
-                        return $data['value'] ? $query->whereJsonContains('countries', $data['value']) : $query;
+                        if (blank($data['value'] ?? null)) {
+                            return $query;
+                        }
+                        if (strtoupper($data['value']) === 'ALL') {
+                            return $query->where(function (Builder $q) {
+                                $q->whereNull('countries')
+                                    ->orWhereJsonContains('countries', 'all')
+                                    ->orWhereJsonContains('countries', 'ALL')
+                                    ->orWhereJsonLength('countries', 0);
+                            });
+                        }
+                        return $query->whereJsonContains('countries', $data['value']);
                     }),
             ])
             ->actions([
