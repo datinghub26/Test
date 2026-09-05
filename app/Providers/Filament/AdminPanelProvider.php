@@ -32,8 +32,9 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
-            ->brandLogo(asset('assets/img/logo.png'))
-            ->favicon(asset('assets/img/icon-light.png'))
+            ->brandLogo(asset('assets/img/logo.png') . '?v=' . (file_exists(public_path('assets/img/logo.png')) ? filemtime(public_path('assets/img/logo.png')) : time()))
+            ->brandLogoHeight('2.2rem')
+            ->favicon(asset('assets/img/icon-light.png') . '?v=' . (file_exists(public_path('assets/img/icon-light.png')) ? filemtime(public_path('assets/img/icon-light.png')) : time()))
             ->colors([
                 'primary' => "#37E780",
                 'secondary' => "#959FAE",
