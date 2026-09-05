@@ -37,6 +37,18 @@ foreach ($lines as $line) {
     $env[trim($key)] = trim(trim($val), '"\'');
 }
 
+echo "<h3>public_html files:</h3><pre>";
+foreach (scandir(__DIR__) as $f) {
+    if ($f === '.' || $f === '..') continue;
+    $p = __DIR__ . '/' . $f;
+    $type = is_link($p) ? 'LINK -> ' . readlink($p) : (is_dir($p) ? 'DIR' : 'FILE (' . filesize($p) . 'b)');
+    echo "$f: $type\n";
+}
+if (file_exists(__DIR__ . '/.htaccess')) {
+    echo "\n--- .htaccess content ---\n" . htmlspecialchars(file_get_contents(__DIR__ . '/.htaccess'));
+}
+echo "</pre>";
+
 $host = $env['DB_HOST'] ?? '127.0.0.1';
 $user = $env['DB_USERNAME'] ?? '';
 $pass = $env['DB_PASSWORD'] ?? '';
