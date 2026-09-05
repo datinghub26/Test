@@ -49,7 +49,7 @@
                               x-data="{ balance: '{{ round(auth()->user()->points, 2) }}' }"
                               x-on:update-balance.window="balance = $event.detail.balance;">
 
-                            <img src="{{ asset('assets/img/coin.png') }}" alt="ERC" width="10" class="me-1"
+                            <img src="{{ asset('assets/img/coin.png') }}?v=2" alt="ERC" width="15" height="15" style="object-fit: contain;" class="me-1"
                                  x-show="is_coin == '1'">
                             <i class="fa-solid fa-dollar-sign me-1" x-show="is_coin == '0'"></i>
                             <span

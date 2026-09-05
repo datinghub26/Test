@@ -87,9 +87,11 @@
                                         <span
                                             class="rounded-pill badge live-cashout-badge d-flex align-items-center gap-1 px-2 py-1"
                                             :style="is_coin == '1' ? 'line-height: 0' : ''">
-                                            <img src="{{ asset('assets/img/coin.png') }}"
+                                            <img src="{{ asset('assets/img/coin.png') }}?v=2"
                                                  x-show="is_coin == '1'"
-                                                 width="11px"
+                                                 width="14px"
+                                                 height="14px"
+                                                 style="object-fit: contain;"
                                                  alt="ERC">
                                             <span
                                                 x-text="is_coin == '1' ? '{{ number_format($withdrawal->amount) }} ERC' : '{{ '$' . to_money_str($withdrawal->amount) }}'"></span>

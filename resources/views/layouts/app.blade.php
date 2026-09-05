@@ -16,7 +16,7 @@
 
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <title>{{ $title ?? config('app.name')  . ' | Earn. Reward. Repeat' }}</title>
-        <link rel="icon" type="image/x-icon" href="{{ asset('assets/img/icon-light.png') }}"/>
+        <link rel="icon" type="image/x-icon" href="{{ asset('assets/img/icon-light.png') }}?v=2"/>
 
         <!-- SEO -->
         @include('layouts.sections.seo')

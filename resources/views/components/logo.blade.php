@@ -1,13 +1,11 @@
 @props([
-    'width' => '35px',
-    'height' => '35px',
-    'fill' => '#37E780',
+    'width' => '200px',
+    'height' => 'auto',
 ])
 
 <a href="{{ url('/') }}">
-{{--    <img src="{{ asset('assets/img/logo.png') }}" alt="Logo" width="200px"/>--}}
-    <span class="text-center">
-        <img src="{{ asset('assets/img/logo.png') }}" alt="Logo" width="200px" class="app-brand-img">
-        <img src="{{ asset('assets/img/icon-light.png') }}" alt="Logo" width="45px" class="app-brand-img-collapsed">
+    <span class="text-center d-inline-flex align-items-center justify-content-center">
+        <img src="{{ asset('assets/img/logo.png') }}?v={{ filemtime(public_path('assets/img/logo.png')) }}" alt="Reward Cash" width="{{ $width }}" style="max-height: 48px; object-fit: contain;" class="app-brand-img">
+        <img src="{{ asset('assets/img/icon-light.png') }}?v={{ filemtime(public_path('assets/img/icon-light.png')) }}" alt="ERC" width="42px" style="object-fit: contain;" class="app-brand-img-collapsed">
     </span>
 </a>
