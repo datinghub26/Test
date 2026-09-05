@@ -68,6 +68,9 @@ class CashoutResource extends Resource
 
                     Forms\Components\FileUpload::make('image')
                         ->label('Logo')
+                        ->disk('public')
+                        ->directory('methods')
+                        ->visibility('public')
                         ->required(fn(string $context): bool => $context === 'create')
                         ->image(),
                 ])->columnSpan(1)
@@ -82,6 +85,7 @@ class CashoutResource extends Resource
                     ->searchable()
                     ->label('Name'),
                 Tables\Columns\ImageColumn::make('image')
+                    ->disk('public')
                     ->label('Logo'),
                 Tables\Columns\TextColumn::make('category')
                     ->label('Category')

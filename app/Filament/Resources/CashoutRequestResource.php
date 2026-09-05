@@ -69,16 +69,22 @@ class CashoutRequestResource extends Resource
             ->columns([
                 UserColumn::make('user')
                     ->searchable(),
-                Tables\Columns\ImageColumn::make('method_image')
-                    ->label('Logo'),
                 Tables\Columns\TextColumn::make('method_name')
                     ->label('Method')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('amount')
                     ->numeric()
-                    ->sortable(),
+                    ->sortable()
+                    ->summarize([
+                        Tables\Columns\Summarizers\Sum::make()
+                            ->label('Total Amount')
+                            ->formatStateUsing(fn ($state) => number_format($state) . ' ERC'),
+                    ]),
                 Tables\Columns\TextColumn::make('address')
-                    ->searchable(),
+                    ->searchable()
+                    ->copyable()
+                    ->copyMessage('Address copied to clipboard')
+                    ->copyMessageDuration(1500),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->color(fn(CashoutRequest $record) => match ($record->status) {

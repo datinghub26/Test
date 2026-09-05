@@ -18,6 +18,22 @@ class CashoutMethod extends Model
         'payment_note',
     ];
 
+    protected $appends = [
+        'image_url',
+    ];
+
+    public function getImageUrlAttribute(): string
+    {
+        if (!$this->image) {
+            return asset('assets/img/icon-light.png');
+        }
+        if (str_starts_with($this->image, 'http://') || str_starts_with($this->image, 'https://')) {
+            return $this->image;
+        }
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->image);
+    }
+
+
 
     public static function boot(): void
     {

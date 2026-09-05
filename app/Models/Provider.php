@@ -40,6 +40,25 @@ class Provider extends Model
         });
     }
 
+    protected $appends = [
+        'image_url',
+    ];
+
+    protected function imageUrl(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                if (!$this->image) {
+                    return asset('assets/img/placeholder-provider.svg');
+                }
+                if (str_starts_with($this->image, 'http://') || str_starts_with($this->image, 'https://')) {
+                    return $this->image;
+                }
+                return \Illuminate\Support\Facades\Storage::disk('public')->url($this->image);
+            }
+        );
+    }
+
     protected function finalUrl(): Attribute
     {
         return Attribute::make(

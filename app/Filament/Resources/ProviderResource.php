@@ -46,6 +46,10 @@ class ProviderResource extends Resource
                     ->columnSpanFull()
                     ->required(),
                 Forms\Components\FileUpload::make('image')
+                    ->label('Logo')
+                    ->disk('public')
+                    ->directory('providers')
+                    ->visibility('public')
                     ->image()
                     ->required()
                     ->columnSpanFull(),
@@ -90,7 +94,8 @@ class ProviderResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('image')
-                    ->label('Image'),
+                    ->disk('public')
+                    ->label('Logo'),
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
                     ->label('Name'),

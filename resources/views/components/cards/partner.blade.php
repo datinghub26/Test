@@ -1,13 +1,17 @@
 @props(['offer', 'isLocked' => false])
 @php
     $isLocked = auth()->check() && $isLocked;
-    $imgSrc = $offer->image;
-    if ($imgSrc) {
-        if (!str_starts_with($imgSrc, 'http://') && !str_starts_with($imgSrc, 'https://')) {
-            $imgSrc = \Illuminate\Support\Facades\Storage::url($imgSrc);
-        }
+    $rawImage = $offer->image ?? '';
+    if (empty($rawImage)) {
+        $imgSrc = '/assets/img/placeholder-provider.svg';
+    } elseif (str_starts_with($rawImage, 'http://') || str_starts_with($rawImage, 'https://')) {
+        $imgSrc = $rawImage;
     } else {
-        $imgSrc = asset('assets/img/placeholder-provider.svg');
+        $cleaned = ltrim($rawImage, '/');
+        if (str_starts_with($cleaned, 'storage/')) {
+            $cleaned = substr($cleaned, 8);
+        }
+        $imgSrc = '/storage/' . $cleaned;
     }
 @endphp
 <div {{ $attributes->merge([
@@ -33,7 +37,7 @@
         @if($isLocked)
             <img src="{{ $imgSrc }}" class="w-100 my-3 object-fit-contain" style="max-height: 80px; filter: blur(2px) brightness(70%);" alt="{{ $offer->name }}"
                  loading="lazy"
-                 onerror="this.onerror=null; this.src='{{ asset('assets/img/placeholder-provider.svg') }}';">
+                 onerror="this.onerror=null; this.src='/assets/img/placeholder-provider.svg'; this.onerror=function(){this.style.opacity='0';};">
 
             <div class="position-absolute text-white">
                 <x-heroicon-s-lock-closed style="width: 38px; height:  38px"/>
@@ -42,7 +46,7 @@
         @else
             <img src="{{ $imgSrc }}" class="w-100 my-3 object-fit-contain" style="max-height: 80px;" alt="{{ $offer->name }}"
                  loading="lazy"
-                 onerror="this.onerror=null; this.src='{{ asset('assets/img/placeholder-provider.svg') }}';">
+                 onerror="this.onerror=null; this.src='/assets/img/placeholder-provider.svg'; this.onerror=function(){this.style.opacity='0';};">
             <i class="fa-solid fa-play position-absolute text-white bg-primary rounded-circle"></i>
         @endif
 
@@ -64,15 +68,55 @@
     </div>
 </div>
 
+@assets
+<style>
+    #offerPartnerModal .modal-dialog {
+        max-width: 960px;
+        width: 95%;
+        margin: 1.75rem auto;
+    }
+    #offerPartnerModal .modal-content {
+        height: 84vh;
+        max-height: 800px;
+        min-height: 520px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+    }
+    #offerPartnerModal .modal-body {
+        height: calc(84vh - 58px);
+        max-height: 742px;
+    }
+    @media (max-width: 767.98px) {
+        #offerPartnerModal .modal-dialog {
+            max-width: 100% !important;
+            width: 100% !important;
+            height: 100% !important;
+            margin: 0 !important;
+        }
+        #offerPartnerModal .modal-content {
+            height: 100% !important;
+            max-height: 100vh !important;
+            border-radius: 0 !important;
+            border: none !important;
+        }
+        #offerPartnerModal .modal-body {
+            height: calc(100vh - 55px) !important;
+            max-height: none !important;
+        }
+    }
+</style>
+@endassets
+
 @once
     @push('modals')
         <div class="modal fade" id="offerPartnerModal" tabindex="-1" aria-labelledby="offerPartnerModal"
              aria-hidden="true" style="z-index: 9999999;">
-            <div class="modal-dialog modal-xl modal-dialog-centered modal-fullscreen-sm-down" style="max-width: 92vw; margin: auto;">
-                <div class="modal-content bg-dark" style="height: 90vh; max-height: 90vh; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column;">
-                    <div class="modal-header py-2 px-3 border-secondary d-flex align-items-center justify-content-between" style="flex: 0 0 auto;">
+            <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down">
+                <div class="modal-content bg-dark overflow-hidden d-flex flex-column">
+                    <div class="modal-header py-2 px-3 border-secondary d-flex align-items-center justify-content-between" style="flex: 0 0 auto; background: #14181f; border-bottom: 1px solid rgba(255,255,255,0.08);">
                         <div class="d-flex align-items-center gap-2">
-                            <x-heroicon-s-arrow-top-right-on-square width="22px" class="text-primary"/>
+                            <x-heroicon-s-arrow-top-right-on-square width="20px" class="text-primary"/>
                             <span class="fw-semibold text-white fs-6" id="offerModalTitle">Loading...</span>
                         </div>
                         <div class="d-flex align-items-center gap-2">
@@ -82,7 +126,7 @@
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                     </div>
-                    <div class="modal-body p-0 text-center position-relative" style="flex: 1 1 auto; height: calc(90vh - 55px); overflow: hidden; background: #0e1217;">
+                    <div class="modal-body p-0 text-center position-relative overflow-hidden" style="flex: 1 1 auto; background: #0e1217;">
                         <div id="spinner" class="position-absolute top-50 start-50 translate-middle py-5" style="z-index: 10;">
                             <div class="spinner-border text-primary" role="status">
                                 <span class="visually-hidden">Loading...</span>
@@ -137,7 +181,7 @@
                 iframeContainer.innerHTML = `
                     <iframe src="${url}"
                             id="activeOfferwallIframe"
-                            style="width:100%; height:100%; min-height: calc(90vh - 55px); border:none;"
+                            style="width:100%; height:100%; border:none; display:block;"
                             allow="camera; microphone; geolocation; clipboard-read; clipboard-write; fullscreen"
                             allowfullscreen
                             loading="eager"></iframe>

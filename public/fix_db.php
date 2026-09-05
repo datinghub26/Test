@@ -1,5 +1,14 @@
 <?php
 
+// Security: Prevent public web access to database and file operations
+if (php_sapi_name() !== 'cli') {
+    $token = $_GET['key'] ?? '';
+    if (empty($token) || $token !== 'erc_secure_deploy_2026') {
+        http_response_code(404);
+        die("<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n<html><head><title>404 Not Found</title></head><body><h1>Not Found</h1><p>The requested URL was not found on this server.</p></body></html>");
+    }
+}
+
 $possibleEnvFiles = [
     __DIR__ . '/../GTP/.env',
     __DIR__ . '/../.env',
