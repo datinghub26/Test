@@ -16,7 +16,9 @@ use Filament\Support\Enums\MaxWidth;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use JaOcero\RadioDeck\Forms\Components\RadioDeck;
 use Malzariey\FilamentDaterangepickerFilter\Filters\DateRangeFilter;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
@@ -29,11 +31,17 @@ class LeadResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-rocket-launch';
     protected static ?int $navigationSort = 100;
 
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(['user', 'offer']);
+    }
 
     public static function getNavigationBadge(): ?string
     {
-        $count = Lead::whereDate('created_at', today())->where('type', 'offer')->count();
-        return $count > 0 ? $count : null;
+        $count = Cache::remember('leads_today_badge_count', 60, function () {
+            return Lead::whereDate('created_at', today())->where('type', 'offer')->count();
+        });
+        return $count > 0 ? (string)$count : null;
     }
 
     public static function form(Form $form): Form
@@ -95,12 +103,13 @@ class LeadResource extends Resource
                     ]),
                 Tables\Filters\SelectFilter::make('provider')
                     ->options(function () {
-                        // Get distinct non-null provider values
-                        return Lead::whereNotNull('provider')
-                            ->distinct()
-                            ->orderBy('provider')
-                            ->pluck('provider', 'provider')
-                            ->toArray();
+                        return Cache::remember('leads_filter_providers', 300, function () {
+                            return Lead::whereNotNull('provider')
+                                ->distinct()
+                                ->orderBy('provider')
+                                ->pluck('provider', 'provider')
+                                ->toArray();
+                        });
                     })
                     ->searchable() // Make the dropdown searchable for better UX with many providers
                     ->preload() // Load options when the page loads rather than when clicked

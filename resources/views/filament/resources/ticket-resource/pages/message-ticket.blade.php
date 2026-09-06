@@ -44,8 +44,8 @@
                 <div class="flex flex-col sm:flex-row gap-4">
                     <div class="flex-shrink-0">
                         <img
-                            src="{{ $reply->user->avatar() }}"
-                            alt="{{ $reply->user->username }}"
+                            src="{{ $reply->user?->avatar() ?? asset('assets/avatars/memoji_1.png') }}"
+                            alt="{{ $reply->user?->username ?? 'User' }}"
                             class="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-700"
                         />
                     </div>
@@ -54,10 +54,10 @@
                             <div class="flex items-center justify-between mb-2 space-x-2">
                                 <div>
                                     <span class="font-medium text-gray-900 dark:text-gray-100">
-                                        {{ $reply->user->username }}
+                                        {{ $reply->user?->username ?? 'Support Agent' }}
                                     </span>
                                     <div class="text-sm text-gray-500 dark:text-gray-400">
-                                        {{ $reply->user->email }}
+                                        {{ $reply->user?->email ?? 'N/A' }}
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2">

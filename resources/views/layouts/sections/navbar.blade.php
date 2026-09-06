@@ -14,12 +14,19 @@
         {{--            </a>--}}
         {{--        </div>--}}
 
-        @foreach(\App\Models\NavbarButton::where('is_active', true)->get() as $btn)
+        @foreach(\App\Models\NavbarButton::where('is_active', true)->orderBy('order')->get() as $btn)
+            @php
+                $btnUrl = $btn->url ? trim($btn->url) : 'javascript:void(0)';
+                if ($btnUrl !== 'javascript:void(0)' && !str_starts_with($btnUrl, 'http://') && !str_starts_with($btnUrl, 'https://') && !str_starts_with($btnUrl, '#')) {
+                    $btnUrl = url($btnUrl);
+                }
+                $isExternal = str_starts_with($btnUrl, 'http://') || str_starts_with($btnUrl, 'https://');
+            @endphp
             <div class="navbar-nav d-flex justify-content-between align-items-center">
                 <a class="btn bg-secondary bg-opacity-50 text-white f-md d-none d-md-block me-2"
-                   target="_blank"
+                   @if($isExternal) target="_blank" rel="noopener noreferrer" @endif
                    style="background-color: {{ $btn->bg_color }} !important;"
-                   href="{{ $btn->url }}">
+                   href="{{ $btnUrl }}">
                     @if($btn->image)
                         <img src="{{ Storage::url($btn->image) }}" alt="" width="20px" class="me-2">
                     @endif

@@ -29,6 +29,16 @@ class MessageTicket extends Page implements HasForms, HasActions
 
     public Ticket $ticket;
 
+    public function mount(int|string|Ticket $ticket): void
+    {
+        if ($ticket instanceof Ticket) {
+            $this->ticket = $ticket;
+            $this->ticket->loadMissing(['messages.user', 'media', 'user']);
+        } else {
+            $this->ticket = Ticket::with(['messages.user', 'media', 'user'])->findOrFail($ticket);
+        }
+    }
+
     protected function getHeaderActions(): array
     {
         return [

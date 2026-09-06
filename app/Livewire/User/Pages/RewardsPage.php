@@ -22,13 +22,15 @@ class RewardsPage extends Component
     public function streakEndTime()
     {
         $last_claim = auth()->user()?->streaksClaims()?->latest()->first();
-        $end_timestamp = $last_claim?->created_at->addHours(setting('streaks.required_hours', 24));
+        $hours = (int) setting('streaks.required_hours', 24);
+        $end_timestamp = $last_claim && $last_claim->created_at ? $last_claim->created_at->copy()->addHours($hours) : now();
         return $last_claim ? $end_timestamp : now();
     }
 
     public function isUserAchievedTargetToday(): bool
     {
-        return auth()->user()?->leads()?->whereDate('created_at', today())->sum('points') >= setting('streaks.required_points', 1000);
+        $requiredPoints = (float) setting('streaks.required_points', 1000);
+        return (float)(auth()->user()?->leads()?->whereDate('created_at', today())->sum('points') ?? 0) >= $requiredPoints;
     }
 
     public function isUserClaimedStreak($id): bool
@@ -39,14 +41,17 @@ class RewardsPage extends Component
     public function isUserCanClaimStreak($id): bool
     {
         $streak = Streak::find($id);
+        if (!$streak) return false;
+
+        $requiredHours = (int) setting('streaks.required_hours', 24);
         $last_claim = auth()->user()?->streaksClaims()?->latest()->first();
         if ($last_claim && $last_claim->streak_id == $id)
             return false;
 
-        if ($last_claim && $last_claim->created_at->diffInHours(now()) > setting('streaks.required_hours', 24))
+        if ($last_claim && $last_claim->created_at && $last_claim->created_at->diffInHours(now()) > $requiredHours)
             return false;
 
-        if ($last_claim && $last_claim->streak->day + 1 != $streak->day)
+        if ($last_claim && $last_claim->streak && $last_claim->streak->day + 1 != $streak->day)
             return false;
 
         if (!$last_claim && $streak->day != 1)
@@ -54,15 +59,16 @@ class RewardsPage extends Component
 
         $achieved_target = $this->isUserAchievedTargetToday();
         $is_claimed = $this->isUserClaimedStreak($id);
-        $is_streak_ended = $last_claim && $last_claim?->created_at->diffInHours(now()) > setting('streaks.required_hours', 24);
-        $is_claimed_today = $last_claim && $last_claim?->created_at->isToday();
+        $is_streak_ended = $last_claim && $last_claim->created_at && $last_claim->created_at->diffInHours(now()) > $requiredHours;
+        $is_claimed_today = $last_claim && $last_claim->created_at && $last_claim->created_at->isToday();
         return $achieved_target && !$is_claimed && !$is_streak_ended && !$is_claimed_today;
     }
 
     public function isStreakEnded(): bool
     {
         $last_claim = auth()->user()?->streaksClaims()?->latest()->first();
-        return $last_claim?->created_at->diffInHours(now()) > setting('streaks.required_hours', 24);
+        $requiredHours = (int) setting('streaks.required_hours', 24);
+        return $last_claim && $last_claim->created_at ? $last_claim->created_at->diffInHours(now()) > $requiredHours : false;
     }
 
     public function claimStreak($id): void

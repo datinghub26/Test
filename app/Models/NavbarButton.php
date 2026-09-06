@@ -10,7 +10,7 @@ class NavbarButton extends Model
         'name',
         'image',
         'bg_color',
-//        'url',
+        'url',
         'order',
         'is_active'
     ];
