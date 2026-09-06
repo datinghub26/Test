@@ -31,8 +31,8 @@ class ProfilePage extends Component
         $this->username = auth()->user()->username;
         $this->email = auth()->user()->email;
         $leadsCount = auth()->user()->leads()->count();
-        $leadsPoints = auth()->user()->leads()->sum('points');
-        $lastMonthLeadsPoints = auth()->user()->leads()->where('created_at', '>=', now()->subMonth())->sum('points');
+        $leadsPoints = auth()->user()->leads()->where('status', 'approved')->sum('points');
+        $lastMonthLeadsPoints = auth()->user()->leads()->where('status', 'approved')->where('created_at', '>=', now()->subMonth())->sum('points');
         $referralsCount = auth()->user()->referrals()->count();
         $leads = auth()->user()->leads()->latest()->paginate(10);
         $withdrawals = auth()->user()->cashouts()->where('status', 'approved')->latest()->paginate(10);

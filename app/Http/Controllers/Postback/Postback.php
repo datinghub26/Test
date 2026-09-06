@@ -76,9 +76,12 @@ abstract class Postback
         }
 
         // ✅ Normalize important fields
-        $data['user_id'] = $data['user_id'] ?? $data['subId'] ?? null;
-        $data['amount'] = isset($data['amount']) ? intval($data['amount']) : (isset($data['reward']) ? intval($data['reward']) : 0);
-        $data['payout'] = isset($data['payout']) ? intval($data['payout']) : 0;
+        $data['user_id'] = $data['user_id'] ?? $data['subId'] ?? $data['sub1'] ?? $data['uid'] ?? $data['player_id'] ?? null;
+        $data['amount'] = isset($data['amount']) ? floatval($data['amount']) : (isset($data['reward']) ? floatval($data['reward']) : (isset($data['currency_amount']) ? floatval($data['currency_amount']) : 0));
+        $data['payout'] = isset($data['payout']) ? floatval($data['payout']) : (isset($data['revenue']) ? floatval($data['revenue']) : 0);
+        $data['trx'] = $data['trx'] ?? $data['transaction_id'] ?? $data['trans_id'] ?? $data['tx_id'] ?? $data['txid'] ?? $data['conversion_id'] ?? null;
+        $data['campaign_id'] = $data['campaign_id'] ?? $data['offer_id'] ?? $data['of_id'] ?? null;
+        $data['campaign_name'] = $data['campaign_name'] ?? $data['offer_name'] ?? $data['of_name'] ?? null;
 
         // ✅ Mark as failed if payout or amount is negative
         if ($data['amount'] < 0 || $data['payout'] < 0) {
@@ -156,17 +159,56 @@ abstract class Postback
 
         $this->applyPending($data);
 
+        // ✅ Check if a transaction with this trx ID already exists
+        if (!empty($data['trx'])) {
+            $existingLead = Lead::where('offer_trx_id', $data['trx'])->first();
+
+            if ($existingLead) {
+                // If previously pending and incoming postback is approved (not pending)
+                if ($existingLead->status === 'pending' && !isset($data['pending'])) {
+                    $existingLead->update([
+                        'status' => 'approved',
+                        'release_at' => null,
+                    ]);
+
+                    $user = $existingLead->user;
+                    if ($user) {
+                        $user->updateUserPointsAndLevel(floatval($existingLead->points));
+                        $user->addNotification(
+                            'Offer Completed',
+                            "Your pending offer '{$existingLead->name}' was approved and {$existingLead->points} ERC credited!",
+                            'offer_completed'
+                        );
+                    }
+
+                    Log::channel('postback')->info("Pending lead #{$existingLead->id} approved via follow-up postback for trx {$data['trx']}");
+                    return;
+                }
+
+                // If already approved, ignore duplicate to avoid double-crediting
+                if ($existingLead->status === 'approved') {
+                    Log::channel('postback')->info("Duplicate postback ignored for already approved trx {$data['trx']}");
+                    return;
+                }
+            }
+        }
+
         $this->saveLead($data);
         $this->increasePoints($data);
     }
 
     protected function hasChargeback($data)
     {
-        if (isset($data['status']) && $data['status'] == 2)
-            return true;
+        if (isset($data['status'])) {
+            $s = strtolower(trim((string)$data['status']));
+            if (in_array($s, ['2', 'chargeback', 'rejected', 'reversed', 'cancel'])) {
+                return true;
+            }
+        }
 
-        if (floatval($data['amount']) < 0)
+        if (floatval($data['amount'] ?? 0) < 0 || floatval($data['payout'] ?? 0) < 0) {
             return true;
+        }
 
         return false;
     }
@@ -228,15 +270,18 @@ abstract class Postback
         // 2. Global pending threshold
         $pending = setting('postback.enable_pending');
         $pendingAmount = (int)setting('postback.pending_threshold', 0);
-        if ($pending && floatval($data['amount']) >= $pendingAmount) {
+        if ($pending && floatval($data['amount'] ?? 0) >= $pendingAmount) {
             Log::channel('postback-hold')->info("Global Postback Threshold Reached", $data);
             $data['pending'] = true;
         }
 
-        // 3. Status 3 from network
-        if (isset($data['status']) && $data['status'] == 3) {
-            Log::channel('postback-hold')->info("Postback Status Pending(3)", $data);
-            $data['pending'] = true;
+        // 3. Status from network indicating pending (0, 3, pending, hold, waiting)
+        if (isset($data['status'])) {
+            $s = strtolower(trim((string)$data['status']));
+            if (in_array($s, ['0', '3', 'pending', 'hold', 'waiting'])) {
+                Log::channel('postback-hold')->info("Postback Status Pending ({$s})", $data);
+                $data['pending'] = true;
+            }
         }
     }
 

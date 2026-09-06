@@ -177,8 +177,9 @@
                             <div class="table-responsive">
                                 <table class="table align-middle mb-0 small " style="font-weight: 600">
                                     <thead>
-                                    <tr>
+                                     <tr>
                                         <th>Name</th>
+                                        <th>Status</th>
                                         <th>Time</th>
                                         <th>ERC</th>
                                     </tr>
@@ -201,6 +202,15 @@
                                                 @endif
                                                 <span class="text-truncate">{{ $lead->name }}</span>
                                             </td>
+                                            <td>
+                                                @if($lead->status === 'approved')
+                                                    <span class="badge bg-label-success">Approved</span>
+                                                @elseif($lead->status === 'pending')
+                                                    <span class="badge bg-label-warning">Pending</span>
+                                                @else
+                                                    <span class="badge bg-label-danger">{{ ucfirst($lead->status) }}</span>
+                                                @endif
+                                            </td>
                                             <td>{{ $lead->created_at->diffForHumans() }}</td>
                                             <td class="text-truncate">
                                                 <x-coins :coins="$lead->points"/>
@@ -208,7 +218,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="3" class="text-center">No activity found</td>
+                                            <td colspan="4" class="text-center">No activity found</td>
                                         </tr>
                                     @endforelse
                                     </tbody>
