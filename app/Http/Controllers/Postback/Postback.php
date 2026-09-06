@@ -185,9 +185,21 @@ abstract class Postback
                     return;
                 }
 
+                // If already pending and incoming is still pending, ignore duplicate
+                if ($existingLead->status === 'pending' && isset($data['pending'])) {
+                    Log::channel('postback')->info("Duplicate pending postback ignored for trx {$data['trx']}");
+                    return;
+                }
+
                 // If already approved, ignore duplicate to avoid double-crediting
                 if ($existingLead->status === 'approved') {
                     Log::channel('postback')->info("Duplicate postback ignored for already approved trx {$data['trx']}");
+                    return;
+                }
+
+                // If already rejected, ignore
+                if ($existingLead->status === 'rejected') {
+                    Log::channel('postback')->info("Duplicate postback ignored for already rejected trx {$data['trx']}");
                     return;
                 }
             }
