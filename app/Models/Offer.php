@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -35,12 +36,60 @@ class Offer extends Model
         'is_manual' => 'boolean',
         'is_active' => 'boolean',
         'hold_duration_days' => 'integer',
-        'instructions' => 'array',
         'categories' => 'array',
         'countries' => 'array',
         'devices' => 'array',
         'events' => 'array',
     ];
+
+    /**
+     * Ensure instructions is always accessed and stored as an array of step strings.
+     */
+    protected function instructions(): Attribute
+    {
+        return Attribute::make(
+            get: function ($value) {
+                if (empty($value)) return [];
+                if (is_array($value)) return array_values(array_filter($value));
+                $decoded = json_decode($value, true);
+                if (is_array($decoded)) return array_values(array_filter($decoded));
+                if (is_string($value)) {
+                    $trimmed = trim($value);
+                    if (str_contains($trimmed, "\n")) {
+                        return array_values(array_filter(array_map(fn($s) => trim(preg_replace('/^\d+[\.\)]\s*/', '', $s)), explode("\n", $trimmed))));
+                    }
+                    $parts = preg_split('/(?:^|\s+)\d+[\.\)]\s+/', $trimmed, -1, PREG_SPLIT_NO_EMPTY);
+                    if (count($parts) > 1) {
+                        return array_values(array_filter(array_map('trim', $parts)));
+                    }
+                    return [trim(preg_replace('/^\d+[\.\)]\s*/', '', $trimmed))];
+                }
+                return [];
+            },
+            set: function ($value) {
+                if (is_array($value)) {
+                    return json_encode(array_values(array_filter($value)));
+                }
+                if (is_string($value)) {
+                    $trimmed = trim($value);
+                    if (str_starts_with($trimmed, '[') && str_ends_with($trimmed, ']')) {
+                        $decoded = json_decode($trimmed, true);
+                        if (is_array($decoded)) return json_encode(array_values(array_filter($decoded)));
+                    }
+                    if (str_contains($trimmed, "\n")) {
+                        $lines = array_values(array_filter(array_map(fn($s) => trim(preg_replace('/^\d+[\.\)]\s*/', '', $s)), explode("\n", $trimmed))));
+                        return json_encode($lines);
+                    }
+                    $parts = preg_split('/(?:^|\s+)\d+[\.\)]\s+/', $trimmed, -1, PREG_SPLIT_NO_EMPTY);
+                    if (count($parts) > 1) {
+                        return json_encode(array_values(array_filter(array_map('trim', $parts))));
+                    }
+                    return json_encode([trim(preg_replace('/^\d+[\.\)]\s*/', '', $trimmed))]);
+                }
+                return json_encode([]);
+            }
+        );
+    }
 
     public function leads(): HasMany
     {

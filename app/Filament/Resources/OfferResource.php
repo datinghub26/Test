@@ -36,7 +36,9 @@ class OfferResource extends Resource
                     ->maxLength(255),
                 Forms\Components\TextInput::make('description')
                     ->maxLength(1000),
-                Forms\Components\TextInput::make('instructions'),
+                Forms\Components\Textarea::make('instructions')
+                    ->rows(3)
+                    ->helperText('Enter steps separated by new lines or numbered steps (1. ... 2. ...).'),
                 Forms\Components\TextInput::make('requirements')
                     ->maxLength(255),
                 Forms\Components\TextInput::make('image')

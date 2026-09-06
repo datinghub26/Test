@@ -1,5 +1,32 @@
 <div
-    x-data="{ offer: null, is_coin: localStorage.getItem('isCoin') || '0' }"
+    x-data="{
+        offer: null,
+        is_coin: localStorage.getItem('isCoin') || '0',
+        getInstructions() {
+            if (!this.offer?.instructions) return [];
+            let ins = this.offer.instructions;
+            if (Array.isArray(ins)) return ins.filter(Boolean);
+            if (typeof ins === 'string') {
+                let trimmed = ins.trim();
+                if (!trimmed) return [];
+                try {
+                    let parsed = JSON.parse(trimmed);
+                    if (Array.isArray(parsed)) return parsed.filter(Boolean);
+                } catch (e) {}
+                if (trimmed.includes('\n')) {
+                    return trimmed.split(/\r?\n/).map(s => s.trim().replace(/^\d+[\.\)]\s*/, '')).filter(Boolean);
+                }
+                if (/(?:^|\s+)\d+[\.\)]\s+/.test(trimmed)) {
+                    let parts = trimmed.split(/(?:^|\s+)\d+[\.\)]\s+/).filter(Boolean);
+                    if (parts.length > 1) {
+                        return parts.map(s => s.trim()).filter(Boolean);
+                    }
+                }
+                return [trimmed.replace(/^\d+[\.\)]\s*/, '')];
+            }
+            return [];
+        }
+    }"
     x-on:update-coins.window="is_coin = $event.detail.isCoin"
     x-on:open-offer-api-modal.window="
         offer = $event.detail;
@@ -146,13 +173,13 @@
                             </div>
 
                             <!-- Steps -->
-                            <div class="mt-4" x-show="offer?.instructions && offer?.instructions.length > 0">
+                            <div class="mt-4" x-show="getInstructions().length > 0">
                                 <p class="fw-bold m-0 p-0 f-md" style="font-size: 14px; line-height: 160%">Steps</p>
-                                <template x-for="(instruction, index) in offer?.instructions" :key="index">
+                                <template x-for="(instruction, index) in getInstructions()" :key="index">
                                     <div class="mt-2 d-flex align-items-center">
-                                <span class="bg-label-secondary text-center rounded fw-medium"
-                                      style="font-size: 11px !important ; width: 18px"
-                                      x-text="index + 1"></span>
+                                        <span class="bg-label-secondary text-center rounded fw-medium flex-shrink-0"
+                                              style="font-size: 11px !important; min-width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;"
+                                              x-text="index + 1"></span>
                                         <span class="small text-body ms-2" style="font-size: 11px"
                                               x-text="instruction"></span>
                                     </div>
