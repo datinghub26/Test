@@ -50,6 +50,12 @@ Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallbac
 /* Custom Offerwall routes */
 Route::get('/offerwall/ogads', [OfferwallController::class, 'ogads'])->name('offerwall.ogads');
 
+/* API Postback endpoints */
+Route::group(['prefix' => 'api/postback'], function () {
+    Route::any('/clickwall', [\App\Http\Controllers\Postback\PostbackController::class, 'clickwall']);
+    Route::any('/cpagrip', [\App\Http\Controllers\Postback\PostbackController::class, 'cpagrip']);
+});
+
 
 /* Test routes */
 Route::get('/test-mail', function () {

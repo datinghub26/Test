@@ -374,13 +374,78 @@ class PostbackController extends Postback
     {
         return $this->handlePostback($request, 'Adtowall');
     }
-    
-    
-    
-    
-    
-    
-    
-    
-    
-}
+
+    // "https://your-domain/postback/ZJX44M5PLK/clickwall?user_id={user_id}&amount={amount}&payout={payout}&trx={txid}&offer_name={offer_name}"
+    // or "https://your-domain/api/postback/clickwall?user_id={sub1}&payout={payout}&txid={txid}"
+    public function clickwall(Request $request)
+    {
+        $data = $request->all();
+
+        // Support sub1 as user_id
+        if (!empty($data['sub1']) && empty($data['user_id'])) {
+            $data['user_id'] = $data['sub1'];
+        }
+
+        // Support txid / trans_id as trx
+        if (!empty($data['txid']) && empty($data['trx'])) {
+            $data['trx'] = $data['txid'];
+        }
+
+        // Support points as amount
+        if (isset($data['points']) && !isset($data['amount'])) {
+            $data['amount'] = $data['points'];
+        }
+
+        $payoutRate = (float)setting('offers.clickwall.payout_rate', 500);
+
+        // Calculate amount from payout if needed
+        if ((!isset($data['amount']) || $data['amount'] === '' || $data['amount'] === 0) && !empty($data['payout'])) {
+            $data['amount'] = floatval($data['payout']) * $payoutRate;
+        }
+
+        // Calculate payout from amount if needed
+        if ((!isset($data['payout']) || $data['payout'] === '' || $data['payout'] === 0) && !empty($data['amount'])) {
+            $data['payout'] = $payoutRate > 0 ? (floatval($data['amount']) / $payoutRate) : 0;
+        }
+
+        return $this->handlePostback($request, 'ClickWall', modifiedData: $data);
+    }
+
+    // "https://your-domain/postback/ZJX44M5PLK/cpagrip?user_id={subid}&points={payout}&tracking_id={tracking_id}"
+    // or "https://your-domain/api/postback/cpagrip?user_id={subid}&points={payout}&tracking_id={tracking_id}"
+    public function cpagrip(Request $request)
+    {
+        $data = $request->all();
+
+        // Support subid / sub_id as user_id
+        if (!empty($data['subid']) && empty($data['user_id'])) {
+            $data['user_id'] = $data['subid'];
+        } elseif (!empty($data['sub_id']) && empty($data['user_id'])) {
+            $data['user_id'] = $data['sub_id'];
+        }
+
+        // Support tracking_id as trx
+        if (!empty($data['tracking_id']) && empty($data['trx'])) {
+            $data['trx'] = $data['tracking_id'];
+        }
+
+        $payoutRate = (float)setting('offers.cpagrip.payout_rate', 500);
+
+        // CPAGrip sends {payout} in USD.
+        // If points is passed as {payout} without a separate payout parameter:
+        if (isset($data['payout']) && !isset($data['amount'])) {
+            $data['amount'] = floatval($data['payout']) * $payoutRate;
+        } elseif (isset($data['points']) && !isset($data['amount'])) {
+            $val = floatval($data['points']);
+            if (!isset($data['payout'])) {
+                $data['payout'] = $val;
+                $data['amount'] = $val * $payoutRate;
+            } else {
+                $data['amount'] = $val;
+            }
+        } elseif (isset($data['amount']) && !isset($data['payout'])) {
+            $data['payout'] = $payoutRate > 0 ? (floatval($data['amount']) / $payoutRate) : 0;
+        }
+
+        return $this->handlePostback($request, 'CPAGrip', modifiedData: $data);
+    }}

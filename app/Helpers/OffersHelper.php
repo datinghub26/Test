@@ -19,6 +19,7 @@ class OffersHelper
             'Monlix',
             'Adscendmedia',
             'Notik',
+            'CPAGrip',
         ];
     }
 
@@ -30,6 +31,7 @@ class OffersHelper
             'Monlix' => self::getMonlixApiOffers(),
             'Adscendmedia' => self::getAdscendmediaApiOffers(),
             'Notik' => self::getNotikApiOffers(),
+            'CPAGrip' => self::getCPAGripApiOffers(),
             default => LazyCollection::make(),
         };
     }
@@ -401,5 +403,89 @@ class OffersHelper
             $result = ['Other'];
 
         return json_encode($result);
+    }
+
+    public static function getCPAGripApiOffers(): LazyCollection
+    {
+        if (!setting('offers.cpagrip.enabled'))
+            return LazyCollection::make();
+
+        $userId = setting('offers.cpagrip.user_id');
+        $key = setting('offers.cpagrip.pubkey') ?: setting('offers.cpagrip.key');
+
+        if (empty($userId) || empty($key))
+            return LazyCollection::make();
+
+        try {
+            $response = Http::get("https://www.cpagrip.com/common/offer_feed_json.php", [
+                'user_id' => $userId,
+                'key' => $key,
+                'limit' => 200,
+            ]);
+
+            if (!$response->successful())
+                return LazyCollection::make();
+
+            $data = $response->json();
+            $rawOffers = $data['offers'] ?? (is_array($data) ? $data : []);
+            if (empty($rawOffers))
+                return LazyCollection::make();
+
+            $rate = floatval(setting('offers.cpagrip.payout_rate', 500));
+            if ($rate <= 0) $rate = 500;
+
+            $offers = [];
+            foreach ($rawOffers as $offer) {
+                $offerId = $offer['offer_id'] ?? $offer['id'] ?? null;
+                if (!$offerId) continue;
+
+                $payout = floatval($offer['payout'] ?? 0);
+                $points = $payout * $rate;
+                $link = $offer['link'] ?? $offer['offerlink'] ?? '';
+                if ($link) {
+                    if (str_contains($link, '&tracking_id=')) {
+                        $link = Str::replace('&tracking_id=', '&tracking_id={user_id}', $link);
+                    } elseif (str_contains($link, '&subid=')) {
+                        $link = Str::replace('&subid=', '&subid={user_id}', $link);
+                    } else {
+                        $link .= '&tracking_id={user_id}';
+                    }
+                }
+
+                $countries = [];
+                if (!empty($offer['accepted_countries'])) {
+                    $countries = is_array($offer['accepted_countries']) ? $offer['accepted_countries'] : explode(',', $offer['accepted_countries']);
+                } elseif (!empty($offer['country'])) {
+                    $countries = is_array($offer['country']) ? $offer['country'] : [$offer['country']];
+                }
+
+                $categories = [];
+                if (!empty($offer['category'])) {
+                    $categories = is_array($offer['category']) ? $offer['category'] : [$offer['category']];
+                }
+
+                $offers[] = [
+                    'provider' => 'CPAGrip',
+                    'offer_id' => (string)$offerId,
+                    'title' => $offer['title'] ?? 'CPAGrip Offer',
+                    'description' => $offer['description'] ?? $offer['requirements'] ?? '',
+                    'instructions' => json_encode([]),
+                    'requirements' => $offer['requirements'] ?? null,
+                    'image' => $offer['icon_url'] ?? $offer['picture'] ?? $offer['image'] ?? null,
+                    'payout' => $payout,
+                    'points' => $points,
+                    'link' => $link,
+                    'countries' => json_encode(array_map('trim', $countries)),
+                    'categories' => self::reformatCategories($categories),
+                    'devices' => self::reformatDevices([$offer['device'] ?? 'all']),
+                    'events' => json_encode([]),
+                ];
+            }
+
+            return LazyCollection::make($offers);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to fetch CPAGrip offers: ' . $e->getMessage());
+            return LazyCollection::make();
+        }
     }
 }

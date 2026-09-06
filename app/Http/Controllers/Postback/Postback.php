@@ -76,12 +76,18 @@ abstract class Postback
         }
 
         // ✅ Normalize important fields
-        $data['user_id'] = $data['user_id'] ?? $data['subId'] ?? $data['sub1'] ?? $data['uid'] ?? $data['player_id'] ?? null;
-        $data['amount'] = isset($data['amount']) ? floatval($data['amount']) : (isset($data['reward']) ? floatval($data['reward']) : (isset($data['currency_amount']) ? floatval($data['currency_amount']) : 0));
+        $data['user_id'] = $data['user_id'] ?? $data['subId'] ?? $data['subid'] ?? $data['sub_id'] ?? $data['sub1'] ?? $data['uid'] ?? $data['player_id'] ?? null;
+        $data['amount'] = isset($data['amount']) ? floatval($data['amount']) : (isset($data['points']) ? floatval($data['points']) : (isset($data['reward']) ? floatval($data['reward']) : (isset($data['currency_amount']) ? floatval($data['currency_amount']) : 0)));
         $data['payout'] = isset($data['payout']) ? floatval($data['payout']) : (isset($data['revenue']) ? floatval($data['revenue']) : 0);
-        $data['trx'] = $data['trx'] ?? $data['transaction_id'] ?? $data['trans_id'] ?? $data['tx_id'] ?? $data['txid'] ?? $data['conversion_id'] ?? null;
+        $data['trx'] = $data['trx'] ?? $data['transaction_id'] ?? $data['trans_id'] ?? $data['tx_id'] ?? $data['txid'] ?? $data['tracking_id'] ?? $data['conversion_id'] ?? null;
         $data['campaign_id'] = $data['campaign_id'] ?? $data['offer_id'] ?? $data['of_id'] ?? null;
         $data['campaign_name'] = $data['campaign_name'] ?? $data['offer_name'] ?? $data['of_name'] ?? null;
+
+        // ✅ Handle network test pings gracefully
+        if ($request->input('test') == '1' || $request->input('is_test') == '1' || $request->input('status') === 'test' || $data['user_id'] === 'test' || $data['user_id'] === 'test_user') {
+            Log::channel('postback')->info("Test conversion ping received and acknowledged for {$companyName}", $data);
+            return response("1", 200);
+        }
 
         // ✅ Mark as failed if payout or amount is negative
         if ($data['amount'] < 0 || $data['payout'] < 0) {
@@ -273,8 +279,8 @@ abstract class Postback
             if ($holdDuration && $holdDuration > 0) {
                 Log::channel('postback-hold')->info("Offer ID {$data['campaign_id']} matched Pending Offer Rule with hold of {$holdDuration} days", $data);
                 $data['pending'] = true;
-                $data['hold_duration_days'] = $holdDuration;
-                $data['release_at'] = now()->addDays($holdDuration);
+                $data['hold_duration_days'] = (int)$holdDuration;
+                $data['release_at'] = now()->addDays((int)$holdDuration);
                 return;
             }
         }
@@ -285,6 +291,11 @@ abstract class Postback
         if ($pending && floatval($data['amount'] ?? 0) >= $pendingAmount) {
             Log::channel('postback-hold')->info("Global Postback Threshold Reached", $data);
             $data['pending'] = true;
+            $defaultDays = (int)setting('postback.pending_duration', 7);
+            if ($defaultDays <= 0) $defaultDays = 7;
+            $data['hold_duration_days'] = $defaultDays;
+            $data['release_at'] = now()->addDays($defaultDays);
+            return;
         }
 
         // 3. Status from network indicating pending (0, 3, pending, hold, waiting)
@@ -293,6 +304,12 @@ abstract class Postback
             if (in_array($s, ['0', '3', 'pending', 'hold', 'waiting'])) {
                 Log::channel('postback-hold')->info("Postback Status Pending ({$s})", $data);
                 $data['pending'] = true;
+                if (empty($data['hold_duration_days'])) {
+                    $defaultDays = (int)setting('postback.pending_duration', 7);
+                    if ($defaultDays <= 0) $defaultDays = 7;
+                    $data['hold_duration_days'] = $defaultDays;
+                    $data['release_at'] = now()->addDays($defaultDays);
+                }
             }
         }
     }
@@ -323,9 +340,32 @@ abstract class Postback
                 'offer_completed'
             );
         } else {
+            // Dynamic hold duration calculation
+            $holdDuration = $data['hold_duration_days'] ?? null;
+            if (!$holdDuration && !empty($data['release_at'])) {
+                $releaseDate = \Carbon\Carbon::parse($data['release_at']);
+                $holdDuration = max(1, (int)ceil(now()->diffInHours($releaseDate, false) / 24));
+            }
+            if (!$holdDuration) {
+                $defaultDays = (int)setting('postback.pending_duration', 7);
+                $holdDuration = $defaultDays > 0 ? $defaultDays : 7;
+            }
+
+            $daysUnit = $holdDuration == 1 ? 'day' : 'days';
+            $template = setting('postback.pending_notification_template');
+            if (empty($template)) {
+                $template = "Your offer '{offer_name}' is pending review. Hold time: {hold_days} {days_unit}.";
+            }
+
+            $message = str_replace(
+                ['{offer_name}', '{hold_days}', '{days}', '{hold_time}', '{days_unit}'],
+                [$this->getHandledName($data), $holdDuration, $holdDuration, "{$holdDuration} {$daysUnit}", $daysUnit],
+                $template
+            );
+
             $user->addNotification(
                 'Offer Pending',
-                "Your offer '{$this->getHandledName($data)}' is pending review.",
+                $message,
                 'warning'
             );
         }

@@ -116,6 +116,16 @@ class Settings extends BaseSettings
                                         ->label('Pending Points Threshold')
                                         ->placeholder('5000')
                                         ->helperText('Leads with points exceeding this value will be marked as pending.'),
+                                    TextInput::make('postback.pending_duration')
+                                        ->numeric()
+                                        ->default(7)
+                                        ->label('Default Pending Hold Duration (Days)')
+                                        ->placeholder('7')
+                                        ->helperText('Default number of days pending leads are held before auto-release.'),
+                                    TextInput::make('postback.pending_notification_template')
+                                        ->label('Pending Notification Template')
+                                        ->placeholder("Your offer '{offer_name}' is pending review. Hold time: {hold_days} {days_unit}.")
+                                        ->helperText("Placeholders: {offer_name}, {hold_days}, {days}, {hold_time}, {days_unit}"),
                                 ]),
                         ]),
                     Tabs\Tab::make('Third Party')

@@ -134,6 +134,36 @@ class OffersSettings extends BaseSettings
                                 ->numeric()
                                 ->label('Payout Rate'),
                         ]),
+                    Tabs\Tab::make('CPAGrip')
+                        ->schema([
+                            Checkbox::make('offers.cpagrip.enabled')
+                                ->label('Enable CPAGrip Offers')
+                                ->default(false),
+                            TextInput::make('offers.cpagrip.user_id')
+                                ->label('CPAGrip Account User ID'),
+                            TextInput::make('offers.cpagrip.pubkey')
+                                ->label('CPAGrip API Public Key'),
+                            TextInput::make('offers.cpagrip.payout_rate')
+                                ->numeric()
+                                ->default(500)
+                                ->label('Payout Rate (Points per $1 USD)')
+                                ->helperText('Example: 500 means $1.00 USD = 500 ERC'),
+                        ]),
+                    Tabs\Tab::make('ClickWall')
+                        ->schema([
+                            Checkbox::make('offers.clickwall.enabled')
+                                ->label('Enable ClickWall')
+                                ->default(false),
+                            TextInput::make('offers.clickwall.app_id')
+                                ->label('ClickWall App ID'),
+                            TextInput::make('offers.clickwall.api_key')
+                                ->label('API / Secret Key'),
+                            TextInput::make('offers.clickwall.payout_rate')
+                                ->numeric()
+                                ->default(500)
+                                ->label('Payout Rate (Points per $1 USD)')
+                                ->helperText('Example: 500 means $1.00 USD = 500 ERC'),
+                        ]),
                 ]),
         ];
     }

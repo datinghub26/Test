@@ -44,7 +44,12 @@ Route::group(['prefix' => 'ZJX44M5PLK'], function () {
     Route::any('/mmwall', [PostbackController::class, 'mmwall']);
     Route::any('/opinion', [PostbackController::class, 'opinion']);
     Route::any('/opinionsurvey', [PostbackController::class, 'opinionsurvey']);
-    
+    Route::any('/clickwall', [PostbackController::class, 'clickwall']);
+    Route::any('/cpagrip', [PostbackController::class, 'cpagrip']);
 });
+
+// Direct postback routes (without secret prefix) for networks that use clean paths
+Route::any('/clickwall', [PostbackController::class, 'clickwall']);
+Route::any('/cpagrip', [PostbackController::class, 'cpagrip']);
 
 
