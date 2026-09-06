@@ -84,9 +84,24 @@ abstract class Postback
         $data['campaign_name'] = $data['campaign_name'] ?? $data['offer_name'] ?? $data['of_name'] ?? null;
 
         // ✅ Handle network test pings gracefully
-        if ($request->input('test') == '1' || $request->input('is_test') == '1' || $request->input('status') === 'test' || $data['user_id'] === 'test' || $data['user_id'] === 'test_user') {
-            Log::channel('postback')->info("Test conversion ping received and acknowledged for {$companyName}", $data);
-            return response("1", 200);
+        $uidStr = strtolower(trim((string)($data['user_id'] ?? '')));
+        $trxStr = strtolower(trim((string)($data['trx'] ?? '')));
+        $offerNameStr = strtolower(trim((string)($data['campaign_name'] ?? '')));
+
+        $isTestPing = $request->input('test') == '1'
+            || $request->input('is_test') == '1'
+            || $request->input('status') === 'test'
+            || $offerNameStr === 'postback-tester'
+            || str_starts_with($trxStr, 'test')
+            || str_starts_with($uidStr, 'test')
+            || in_array($uidStr, ['test', 'test_user', 'super_admin', 'admin', 'tester']);
+
+        if ($isTestPing) {
+            $userExists = is_numeric($data['user_id']) && User::where('id', $data['user_id'])->exists();
+            if (!$userExists) {
+                Log::channel('postback')->info("Test conversion ping received and acknowledged for {$companyName}", $data);
+                return response("1", 200);
+            }
         }
 
         // ✅ Mark as failed if payout or amount is negative
