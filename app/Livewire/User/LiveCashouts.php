@@ -26,7 +26,7 @@ class LiveCashouts extends Component
         try {
             $leads = Lead::where('type', 'offer')
                 ->where('status', 'approved')
-                ->selectRaw("id, name, points as amount, created_at, updated_at, user_id")
+                ->selectRaw("id, name, points as amount, created_at, updated_at, user_id, 'lead' as item_type")
                 ->with('user')
                 ->latest('created_at')
                 ->limit(25)
@@ -34,7 +34,7 @@ class LiveCashouts extends Component
 
             $withdrawals = CashoutRequest::where('status', 'approved')
                 ->join('cashout_methods', 'cashout_requests.method_name', '=', 'cashout_methods.name')
-                ->selectRaw("cashout_requests.id, cashout_requests.method_name as name, cashout_requests.amount, cashout_requests.method_image, cashout_requests.created_at, cashout_requests.updated_at, cashout_requests.user_id, cashout_methods.bg_color as bg_color")
+                ->selectRaw("cashout_requests.id, cashout_requests.method_name as name, cashout_requests.amount, cashout_requests.method_image, cashout_requests.created_at, cashout_requests.updated_at, cashout_requests.user_id, cashout_methods.bg_color as bg_color, 'cashout' as item_type")
                 ->with('user')
                 ->latest('cashout_requests.created_at')
                 ->limit(25)

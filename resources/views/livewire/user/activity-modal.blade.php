@@ -26,16 +26,29 @@
         x-data="{ open: @entangle('show') }"
         x-init="() => {
                 $watch('open', value => {
+                    const modalEl = document.getElementById('activityModal');
                     if (value) {
-                        $('#activityModal').modal('show');
+                        if (window.bootstrap && window.bootstrap.Modal) {
+                            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                        } else if (typeof $ !== 'undefined') {
+                            $('#activityModal').modal('show');
+                        }
                     } else {
-                        $('#activityModal').modal('hide');
+                        if (window.bootstrap && window.bootstrap.Modal) {
+                            bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+                        } else if (typeof $ !== 'undefined') {
+                            $('#activityModal').modal('hide');
+                        }
                     }
                 });
 
-                $('#activityModal').on('hidden.bs.modal', function () {
-                    @this.closeModal();
-                });
+                const modalEl = document.getElementById('activityModal');
+                if (modalEl) {
+                    modalEl.addEventListener('hidden.bs.modal', function () {
+                        @this.closeModal();
+                        window.dispatchEvent(new CustomEvent('activity-modal-closed'));
+                    });
+                }
             }"
         style="z-index: 9999999999;">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
@@ -67,6 +80,49 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    @if(isset($highlightLead) && $highlightLead)
+                        <div class="card border-0 mb-3" style="background: rgba(55, 231, 128, 0.08); border: 1px solid rgba(55, 231, 128, 0.25) !important; border-radius: 12px;">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="badge d-inline-flex align-items-center gap-1" style="background: rgba(55, 231, 128, 0.2); color: #37E780; font-size: 11px; font-weight: 600;">
+                                        <i class="fa-solid fa-circle-check"></i> Completed Offer
+                                    </span>
+                                    <span class="text-secondary small" style="font-size: 11px;">
+                                        <i class="fa-regular fa-clock me-1"></i> {{ $highlightLead->created_at?->diffForHumans() }}
+                                    </span>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between gap-2">
+                                    <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                        @if($highlightLead->image)
+                                            <img src="{{ $highlightLead->image }}" alt="{{ $highlightLead->name }}"
+                                                 class="rounded-2 flex-shrink-0" style="width: 38px; height: 38px; object-fit: cover;"
+                                                 onerror="this.onerror=null; this.src='{{ asset('assets/img/placeholder-offer.svg') }}';">
+                                        @else
+                                            <div class="rounded-2 flex-shrink-0 d-flex align-items-center justify-content-center"
+                                                 style="width: 38px; height: 38px; background: rgba(55, 231, 128, 0.15);">
+                                                <i class="fa-solid fa-rocket text-primary" style="font-size: 18px;"></i>
+                                            </div>
+                                        @endif
+                                        <div class="text-start overflow-hidden">
+                                            <h6 class="mb-0 text-white fw-bold text-truncate" style="font-size: 13px;" title="{{ $highlightLead->name }}">
+                                                {{ $highlightLead->name }}
+                                            </h6>
+                                            <small class="text-secondary text-truncate d-block" style="font-size: 11px;">
+                                                {{ $highlightLead->offer_name ?? 'Offer Task' }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="flex-shrink-0 ms-2 text-end">
+                                        <span class="badge live-cashout-badge px-2 py-1 fw-bold d-inline-flex align-items-center gap-1" style="font-size: 12px;">
+                                            <img src="{{ asset('assets/img/coin.png') }}?v=2" width="13px" height="13px" alt="ERC">
+                                            +{{ number_format($highlightLead->points) }} ERC
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
                     <hr>
 
                     <div class="row text-center">
