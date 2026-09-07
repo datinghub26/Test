@@ -1,139 +1,142 @@
 <div>
-    <div class="card ">
-        <div class="card-body p-3">
-            <div class="card bg-body">
-                <div class="card-header pb-4">
+    <div class="row g-4">
+        <!-- LEFT COLUMN: Account Information, Level & Actions (col-12 col-lg-4) -->
+        <div class="col-12 col-lg-4">
+            <div class="card bg-body border-0 shadow-sm mb-4">
+                <div class="card-header pb-3 d-flex align-items-center justify-content-between border-bottom border-secondary border-opacity-25">
                     <h5 class="card-title fw-bold text-white mb-0">
-                        <i class="fa-solid fa-user  text-secondary me-2"></i>
-                        Account Information
-                        <a class="btn btn-sm btn-primary float-end"
-                           data-bs-target="#editProfileModal"
-                           data-bs-toggle="modal">
-                            <i class="fa-solid fa-pencil me-2"></i>
-                            Edit
+                        <i class="fa-solid fa-user text-primary me-2"></i> Account Information
+                    </h5>
+                    <button class="btn btn-sm btn-primary"
+                            data-bs-target="#editProfileModal"
+                            data-bs-toggle="modal">
+                        <i class="fa-solid fa-pencil me-1"></i> Edit
+                    </button>
+                </div>
+                <div class="card-body pt-4">
+                    <div class="d-flex flex-column align-items-center text-center">
+                        @php
+                            $progress = auth()->user()->levelProgress() ?? 0;
+                        @endphp
+                        <div class="progress-circle mb-3 position-relative"
+                             style="background: conic-gradient(var(--bs-primary) 0% {{ $progress }}%, var(--bs-body-bg) {{ $progress }}% 100%);">
+                            <img src="{{ auth()->user()->avatar() }}" alt="User Avatar"
+                                 class="rounded-circle"
+                                 style="width: 96px; height: 96px; object-fit: cover;"
+                                 onerror="this.onerror=null;this.src='{{ asset('assets/avatars/memoji_1.png') }}';">
+                        </div>
+                        <span class="badge bg-label-primary mb-2">Level {{ auth()->user()->level }}</span>
+                        <h4 class="text-white fw-bold mb-1">{{ auth()->user()->username }}</h4>
+                        <p class="text-secondary small mb-3">
+                            {{ auth()->user()->email }}
+                            @if(auth()->user()->email_verified_at)
+                                <i class="fa-solid fa-check-circle text-primary ms-1" title="Verified"></i>
+                            @else
+                                <i class="fa-solid fa-exclamation-circle text-danger ms-1" title="Unverified"></i>
+                            @endif
+                        </p>
+                    </div>
+
+                    <!-- Level Experience Progress Box -->
+                    <div class="p-3 bg-dark bg-opacity-50 rounded-3 mb-3">
+                        <div class="d-flex justify-content-between small text-secondary mb-1">
+                            <span>Level {{ auth()->user()->level }}</span>
+                            <span class="text-white fw-semibold">{{ round($progress) }}%</span>
+                            <span>Level {{ auth()->user()->level + 1 }}</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-primary" role="progressbar" style="width: {{ $progress }}%;" aria-valuenow="{{ $progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-2" style="font-size: 11px;">
+                            <span class="text-secondary">Current EXP:</span>
+                            <span class="text-white fw-semibold">{{ number_format(auth()->user()->exp) }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Details List -->
+                    <div class="d-flex justify-content-between align-items-center py-2 border-top border-secondary border-opacity-25 small">
+                        <span class="text-secondary">Member Since</span>
+                        <span class="text-white fw-medium">{{ auth()->user()->created_at->format('M Y') }} ({{ auth()->user()->created_at->diffForHumans() }})</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center py-2 border-top border-secondary border-opacity-25 small">
+                        <span class="text-secondary d-flex align-items-center">
+                            Private Profile
+                            <i class="fa-solid fa-question-circle text-secondary ms-1"
+                               data-bs-toggle="tooltip"
+                               data-bs-placement="top"
+                               title="Private mode hides your activity from other users"></i>
+                        </span>
+                        <label class="switch switch-primary f-md mb-0">
+                            <input type="checkbox" class="switch-input" required="" wire:model="private"
+                                   wire:click="togglePrivacy">
+                            <span class="switch-toggle-slider" style="top: 0">
+                                <span class="switch-on"></span>
+                                <span class="switch-off bg-secondary"></span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="mt-3">
+                        <a href="{{ route('referrals') }}" class="btn btn-outline-primary w-100 btn-sm">
+                            <i class="fa-solid fa-handshake-angle me-2"></i> Referral Program
                         </a>
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex justify-content-between gap-2 pt-2">
-                        <div class="d-flex flex-column justify-content-start align-items-center">
-                            @php
-                                $progress = auth()->user()->levelProgress() ?? 0;
-                            @endphp
-                            <div class="progress-circle"
-                                 style="background: conic-gradient(var(--bs-primary) 0% {{ $progress }}%, var(--bs-body-bg) {{ $progress }}% 100%);">
-                                <img src="{{ auth()->user()->avatar() }}" alt="User Avatar"
-                                     class="rounded-circle"
-                                     style="width: 100px;"
-                                     onerror="this.onerror=null;this.src='{{ asset('assets/avatars/memoji_1.png') }}';">
-                            </div>
-                            <div class="mt-2">
-                                <span class="badge bg-label-primary">Level {{ auth()->user()->level }}</span>
-                            </div>
-                        </div>
-                        <div class="d-flex flex-column justify-content-center flex-grow-1 ms-0 ms-4">
-                            <small class="text-body">Joined {{ auth()->user()->created_at->diffForHumans() }}</small>
-                            <h5 class="text-white fw-bold mb-0 h1">{{ auth()->user()->username }}</h5>
-                            <p class="text-body small"> {{ auth()->user()->email }}
-                                @if(auth()->user()->email_verified_at)
-                                    <i class="fa-solid fa-check-circle text-primary"></i>
-                                @else
-                                    <i class="fa-solid fa-exclamation-circle text-danger"></i>
-                                @endif
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="row mt-4 m-auto">
-                        <div class="col-6">
-                            <div class="d-flex align-items-center m-auto">
-                                <svg width="24" height="24" viewBox="0 0 28 22">
-                                    <path fill="currentColor"
-                                          d="M14 1.7c-.4.02-1.4-.07-2.18-.6-.98-.68-2.64-.98-3.62.22-.95 1.16-1.83 4.74-2.15 6.6C2.39 8.43 0 9.31 0 10.31c0 1.62 6.27 2.93 14 2.93s14-1.31 14-2.93c0-1-2.4-1.88-6.05-2.4-.32-1.86-1.2-5.44-2.15-6.6-.98-1.2-2.64-.9-3.62-.23-.78.54-1.78.63-2.18.6Z"></path>
-                                    <path fill="currentColor" fill-rule="evenodd"
-                                          d="M5.34 13.85c1.23.2 4.69.6 8.66.6 3.97 0 7.43-.4 8.66-.6v3.37c0 1.32-.96 2.6-1.43 3.08-.4.4-1.55 1.2-2.94 1.2-1.73 0-2.63-.6-3.09-1.05A1.87 1.87 0 0 0 14 20c-.25 0-.84.09-1.2.45-.46.45-1.36 1.05-3.09 1.05-1.39 0-2.53-.8-2.94-1.2a4.94 4.94 0 0 1-1.43-3.08v-3.37ZM7.57 17c.2-.69 1.08-1.2 2.14-1.2s1.94.51 2.14 1.2c-.2.68-1.08 1.2-2.14 1.2s-1.94-.52-2.14-1.2Zm8.54 0c.2-.69 1.08-1.2 2.14-1.2 1.05 0 1.93.51 2.14 1.2-.2.68-1.09 1.2-2.14 1.2-1.06 0-1.94-.52-2.14-1.2Z"
-                                          clip-rule="evenodd"></path>
-                                </svg>
-
-                                <span class="text-white ms-2 me-2">
-                                    Private
-                                    <i class="fa-solid fa-question-circle text-secondary"
-                                       data-bs-toggle="tooltip"
-                                       data-bs-placement="top"
-                                       data-bs-original-title="Private mode hides your activity from other users"></i>
-                                </span>
-                                <label class="switch switch-primary f-md">
-                                    <input type="checkbox" class="switch-input" required="" wire:model="private"
-                                           wire:click="togglePrivacy">
-                                    <span class="switch-toggle-slider" style="top: 0">
-                                        <span class="switch-on"></span>
-                                        <span class="switch-off bg-secondary"></span>
-                                    </span>
-                                </label>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
-            <div class="card bg-body mt-3">
-                <div class="card-header pb-0">
-                    <h5 class="card-title fw-bold text-white mb-0">
-                        <i class="fa-solid fa-chart-simple text-secondary me-2"></i>
-                        Stats
-                    </h5>
-                </div>
+        </div>
 
-                <div class="card-body mt-3 pb-0 ">
-                    <div class="row mt-4">
-                        <div class="col-xl-2 col-lg-4 col-md-4 col-6 mb-4">
-                            <div class="card">
-                                <div class="card-body text-center">
-                                    <div class="badge rounded-pill p-2 bg-label-primary mb-2">
-                                        <i class="fa-solid fa-circle-check" style="font-size: 20px"></i>
-                                    </div>
-                                    <h5 class="card-title mb-2 text-white f-md">{{ $leadsCount }}</h5>
-                                    <small class="text-body h6">Completed Offers</small>
-                                </div>
+        <!-- RIGHT COLUMN: Stats & Activity Tabs (col-12 col-lg-8) -->
+        <div class="col-12 col-lg-8">
+            <!-- Stats Row -->
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-sm-3">
+                    <div class="card bg-body border-0 shadow-sm h-100">
+                        <div class="card-body text-center p-3">
+                            <div class="badge rounded-pill p-2 bg-label-primary mb-2">
+                                <i class="fa-solid fa-circle-check" style="font-size: 18px"></i>
                             </div>
+                            <h5 class="card-title mb-1 text-white f-md">{{ $leadsCount }}</h5>
+                            <small class="text-secondary" style="font-size: 11px;">Completed</small>
                         </div>
-                        <div class="col-xl-2 col-lg-4 col-md-4 col-6 mb-4">
-                            <div class="card h-100 ">
-                                <div class="card-body text-center">
-                                    <div class="badge rounded-pill p-2 bg-label-primary mb-2">
-                                        <i class="fa-solid fa-users" style="font-size: 20px"></i>
-                                    </div>
-                                    <h5 class="card-title mb-2 text-white f-md">{{ $referralsCount }}</h5>
-                                    <small class="text-body h6">Users Referred</small>
-                                </div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="card bg-body border-0 shadow-sm h-100">
+                        <div class="card-body text-center p-3">
+                            <div class="badge rounded-pill p-2 bg-label-info mb-2">
+                                <i class="fa-solid fa-users" style="font-size: 18px"></i>
                             </div>
+                            <h5 class="card-title mb-1 text-white f-md">{{ $referralsCount }}</h5>
+                            <small class="text-secondary" style="font-size: 11px;">Referred</small>
                         </div>
-                        <div class="col-xl-2 col-lg-4 col-md-4 col-6 mb-4">
-                            <div class="card h-100 ">
-                                <div class="card-body text-center">
-                                    <div class="badge rounded-pill p-2 bg-label-primary mb-2">
-                                        <i class="fa-solid fa-wallet" style="font-size: 20px"></i>
-                                    </div>
-                                    <h5 class="card-title mb-2 text-white f-md">{{ $leadsPoints }}</h5>
-                                    <small class="text-body h6">Total Earning</small>
-                                </div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="card bg-body border-0 shadow-sm h-100">
+                        <div class="card-body text-center p-3">
+                            <div class="badge rounded-pill p-2 bg-label-success mb-2">
+                                <i class="fa-solid fa-wallet" style="font-size: 18px"></i>
                             </div>
+                            <h5 class="card-title mb-1 text-white f-md">{{ number_format($leadsPoints) }}</h5>
+                            <small class="text-secondary" style="font-size: 11px;">Total ERC</small>
                         </div>
-                        <div class="col-xl-2 col-lg-4 col-md-4 col-6 mb-4">
-                            <div class="card h-100 ">
-                                <div class="card-body text-center">
-                                    <div class="badge rounded-pill p-2 bg-label-primary mb-2">
-                                        <i class="fa-solid fa-clock" style="font-size: 20px"></i>
-                                    </div>
-                                    <h5 class="card-title mb-2 text-white f-md">{{ $lastMonthLeadsPoints }}</h5>
-                                    <small class="text-body h6">Earnings last 30 days</small>
-                                </div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="card bg-body border-0 shadow-sm h-100">
+                        <div class="card-body text-center p-3">
+                            <div class="badge rounded-pill p-2 bg-label-warning mb-2">
+                                <i class="fa-solid fa-clock" style="font-size: 18px"></i>
                             </div>
+                            <h5 class="card-title mb-1 text-white f-md">{{ number_format($lastMonthLeadsPoints) }}</h5>
+                            <small class="text-secondary" style="font-size: 11px;">Last 30 Days</small>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="card bg-body p-0 mt-3">
+            <div class="card bg-body p-0 border-0 shadow-sm">
                 <div class="card-header pb-0">
                     <ul class="nav nav-pills mb-3" role="tablist">
                         <li class="nav-item" role="presentation">

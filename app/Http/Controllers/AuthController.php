@@ -154,10 +154,16 @@ class AuthController extends Controller implements HasMiddleware
         if (session()->has('referral')) {
             $referral = UsersReferralData::where('referral_code', session()->get('referral'))->first();
             if ($referral) {
-                if (setting('referral.enable_rewards', true)) {
-                    $points = setting('referral.points', 100);
+                UsersReferral::create([
+                    'user_id' => $user->id,
+                    'referred_by_id' => $referral->user_id,
+                ]);
 
-                    $user->updateUserPointsAndLevel($points);
+                if (setting('referral.enable_rewards', true)) {
+                    $points = (float) setting('referral.points', 100);
+
+                    // 1. Award bonus to the new user for using referral code
+                    $user->updateUserPointsAndLevel($points, false);
                     $user->leads()->create([
                         'name' => 'Referral Bonus',
                         'points' => $points,
@@ -165,14 +171,28 @@ class AuthController extends Controller implements HasMiddleware
                         'ip' => ip(),
                         'country_code' => country_code(),
                     ]);
+                    $user->addNotification('Referral Bonus', "You have received {$points} ERC for using a referral code.");
 
-                    $user->addNotification('Referral Bonus', "You have received $points point for using a referral code.");
+                    // 2. Award bonus to the referrer for referring a new user
+                    $referrer = $referral->user;
+                    if ($referrer) {
+                        $referrer->updateUserPointsAndLevel($points, false);
+                        $referral->increment('referral_points', $points);
+                        $referrer->leads()->create([
+                            'name' => 'Referral Registration Reward',
+                            'points' => $points,
+                            'payout' => 0,
+                            'ip' => ip(),
+                            'country_code' => country_code(),
+                        ]);
+                        $username = $user->username ?? 'a new member';
+                        $referrer->addNotification(
+                            'Referral Reward',
+                            "You received {$points} ERC for referring {$username}!",
+                            'referral'
+                        );
+                    }
                 }
-
-                UsersReferral::create([
-                    'user_id' => $user->id,
-                    'referred_by_id' => $referral->user_id,
-                ]);
             }
         }
     }

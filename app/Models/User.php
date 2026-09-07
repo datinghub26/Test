@@ -113,6 +113,11 @@ class User extends Authenticatable implements FilamentUser, HasName, CanResetPas
         return $this->hasMany(UsersReferral::class, 'referred_by_id');
     }
 
+    public function referredBy(): HasOne
+    {
+        return $this->hasOne(UsersReferral::class, 'user_id');
+    }
+
     public function geo(): HasOne
     {
         return $this->hasOne(UsersGeoData::class);
@@ -192,35 +197,48 @@ class User extends Authenticatable implements FilamentUser, HasName, CanResetPas
      * @param int $points
      * @return void
      */
-    public function updateUserPointsAndLevel(int $points): void
+    public function updateUserPointsAndLevel(float|int $points, bool $awardReferralCommission = true): void
     {
-        $currentPoints = $this->points;
-        $newPoints = $currentPoints + $points;
+        $currentPoints = (float) $this->points;
+        $newPoints = max(0, $currentPoints + $points);
 
-        $experiencePerThousand = setting('level.exp_per_dollar', 300);
+        $experiencePerThousand = (float) setting('level.exp_per_dollar', 300);
         $experiencePoints = ($points / 1000) * $experiencePerThousand;
-        $newExperiencePoints = $this->exp + $experiencePoints;
+        $newExperiencePoints = max(0, (float) $this->exp + $experiencePoints);
 
+        if ($points > 0) {
+            $this->updateUserLevelBasedOnExperience($newExperiencePoints);
+        }
 
-        $this->updateUserLevelBasedOnExperience($newExperiencePoints);
         $this->update([
             'points' => $newPoints,
             'exp' => $newExperiencePoints,
         ]);
 
-        if ($this->referred_by && setting('referral.enable_rewards', true)) {
-            $referredUser = $this->referred_by->referredUser;
-            $commission = sub_percentage($points, 95);
-            $referredUser->referralData->increment('referral_points', $commission);
-            $referredUser->updateUserPointsAndLevel($commission);
-            $referredUser->leads()->create([
-                'name' => 'Referral Commission',
-                'points' => $commission,
-                'payout' => 0,
-                'ip' => ip(),
-                'country_code' => country_code(),
-            ]);
-            $referredUser->addNotification('Referral Commission', "You have received $commission ERC commission from a referred user.");
+        if ($points > 0 && $awardReferralCommission && setting('referral.enable_rewards', true)) {
+            $referrer = $this->referredBy?->referrer;
+            if ($referrer) {
+                $commissionPercent = (float) setting('referral.commission_percentage', 5);
+                $commission = round(($points * $commissionPercent) / 100, 2);
+                if ($commission > 0) {
+                    if ($referrer->referralData) {
+                        $referrer->referralData->increment('referral_points', $commission);
+                    }
+                    $referrer->updateUserPointsAndLevel($commission, false);
+                    $referrer->leads()->create([
+                        'name' => 'Referral Commission',
+                        'points' => $commission,
+                        'payout' => 0,
+                        'ip' => ip(),
+                        'country_code' => country_code(),
+                    ]);
+                    $referrer->addNotification(
+                        'Referral Commission',
+                        "You have received {$commission} ERC commission from a referred user.",
+                        'referral'
+                    );
+                }
+            }
         }
     }
 

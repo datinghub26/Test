@@ -28,6 +28,8 @@ class Lead extends Model
         'status',
         'release_at',
         'hold_duration_days',
+        'lead_time_seconds',
+        'clicked_at',
         'reason',
     ];
 
@@ -35,7 +37,9 @@ class Lead extends Model
         'points' => 'float',
         'payout' => 'float',
         'release_at' => 'datetime',
+        'clicked_at' => 'datetime',
         'hold_duration_days' => 'integer',
+        'lead_time_seconds' => 'integer',
     ];
 
     protected static function boot()

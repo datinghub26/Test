@@ -83,6 +83,39 @@ class LeadResource extends Resource
                         'filament.flag', ['state' => $state],
                     ))
                     ->label('Country'),
+                Tables\Columns\TextColumn::make('lead_time_seconds')
+                    ->label('Lead Time')
+                    ->formatStateUsing(function ($state) {
+                        if (is_null($state)) {
+                            return '—';
+                        }
+                        if ($state < 60) {
+                            return "{$state}s ⚠️";
+                        }
+                        $minutes = floor($state / 60);
+                        $seconds = $state % 60;
+                        if ($minutes < 60) {
+                            return "{$minutes}m {$seconds}s";
+                        }
+                        $hours = floor($minutes / 60);
+                        $remMinutes = $minutes % 60;
+                        return "{$hours}h {$remMinutes}m";
+                    })
+                    ->badge()
+                    ->color(function ($state) {
+                        if (is_null($state)) return 'gray';
+                        if ($state < 60) return 'danger';
+                        if ($state < 300) return 'warning';
+                        return 'success';
+                    })
+                    ->tooltip(function ($record) {
+                        if (!$record->lead_time_seconds) return 'Click time not recorded';
+                        $clicked = $record->clicked_at ? $record->clicked_at->format('Y-m-d H:i:s') : 'N/A';
+                        $completed = $record->created_at ? $record->created_at->format('Y-m-d H:i:s') : 'N/A';
+                        $fraudNote = $record->lead_time_seconds < 60 ? ' | ⚠️ FAST COMPLETION (<1m) - Possible Fraud/Bypass' : '';
+                        return "Clicked: {$clicked}\nCompleted: {$completed}\nDuration: {$record->lead_time_seconds}s{$fraudNote}";
+                    })
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime("Y-m-d h:i A")
                     ->sortable(),
@@ -174,6 +207,7 @@ class LeadResource extends Resource
                         Column::make('country_code')
                             ->heading('Country')
                             ->formatStateUsing(fn($record) => $record->country_code),
+                        Column::make('lead_time_seconds')->heading('Lead Time (Seconds)'),
                         Column::make('created_at'),
                     ]),
                 ]),
@@ -242,7 +276,8 @@ class LeadResource extends Resource
                 ->hidden(fn(Get $get): bool => $get('type') !== 'Other'),
             Toggle::make('reduce')
                 ->label('Reduce Points')
-                ->default(true)
+                ->default(fn($record) => $record?->status === 'approved')
+                ->helperText('Deducts the reward from current balance down to 0. Pending leads were not credited initially.')
                 ->columnSpanFull(),
             Toggle::make('ban')
                 ->label('Ban User')
@@ -258,16 +293,27 @@ class LeadResource extends Resource
             'reason' => $data['reason'] ?? $data['type'],
         ]);
 
-        if ($data['reduce'] === true)
-            $record->user->updateUserPointsAndLevel($record->points * -1, $record->type == 'offer');
+        $deductedPoints = 0;
+        if (($data['reduce'] ?? false) === true && $record->user) {
+            $user = $record->user;
+            $pointsToDeduct = (float) $record->points;
+            $deductedPoints = min((float) $user->points, $pointsToDeduct);
+            if ($deductedPoints > 0) {
+                $user->updateUserPointsAndLevel(-$deductedPoints, false);
+            }
+        }
 
-        if ($data['ban'] === true)
+        if (($data['ban'] ?? false) === true && $record->user) {
             $record->user->update(['is_banned' => true]);
+        }
 
-        $record->user->addNotification(
-            'Offer Chargeback',
-            "Offer '{$record->name}' was marked as {$data['type']}. {$record->points} ERC deducted.",
-            'chargeback'
-        );
+        if ($record->user) {
+            $deductMsg = $deductedPoints > 0 ? " {$deductedPoints} ERC deducted." : "";
+            $record->user->addNotification(
+                'Offer Chargeback',
+                "Offer '{$record->name}' was marked as {$data['type']}.{$deductMsg}",
+                'chargeback'
+            );
+        }
     }
 }

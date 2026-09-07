@@ -1038,3 +1038,60 @@ html::-webkit-scrollbar-thumb:hover {
     text-shadow: 0 0 12px rgba(55, 231, 128, 0.4);
 }
 
+/* Custom Wider Sidebar & Density */
+@media (min-width: 1200px) {
+    .layout-menu-fixed .layout-page,
+    .layout-menu-fixed-offcanvas .layout-page {
+        padding-left: 280px !important;
+    }
+    .layout-menu.menu-vertical,
+    .layout-menu-fixed .layout-menu,
+    .layout-menu-fixed-offcanvas .layout-menu {
+        width: 280px !important;
+    }
+}
+
+/* Thicker, High-Visibility Sidebar Scrollbar */
+.layout-menu .menu-inner::-webkit-scrollbar,
+.layout-menu .ps__rail-y {
+    width: 8px !important;
+    background: transparent !important;
+    opacity: 1 !important;
+}
+
+.layout-menu .menu-inner::-webkit-scrollbar-track,
+.layout-menu .ps__rail-y {
+    background: rgba(0, 0, 0, 0.18) !important;
+    border-radius: 4px !important;
+}
+
+.layout-menu .menu-inner::-webkit-scrollbar-thumb,
+.layout-menu .ps__thumb-y {
+    width: 8px !important;
+    background-color: rgba(255, 255, 255, 0.3) !important;
+    border-radius: 4px !important;
+    transition: background-color 0.2s ease;
+}
+
+.layout-menu .menu-inner::-webkit-scrollbar-thumb:hover,
+.layout-menu .ps__thumb-y:hover {
+    background-color: var(--bs-primary, #37E780) !important;
+}
+
+/* Horizontal Live Coin Bar custom scrollbar */
+.overflow-x-auto::-webkit-scrollbar {
+    height: 4px;
+}
+.overflow-x-auto::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+.overflow-x-auto::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.22);
+    border-radius: 4px;
+}
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+    background: #37E780;
+}
+
+

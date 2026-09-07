@@ -50,6 +50,25 @@ Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallbac
 /* Custom Offerwall routes */
 Route::get('/offerwall/ogads', [OfferwallController::class, 'ogads'])->name('offerwall.ogads');
 
+/* Offer Click Tracking */
+Route::post('/offers/track-click', function (\Illuminate\Http\Request $request) {
+    if (!auth()->check()) {
+        return response()->json(['status' => 'unauthenticated'], 401);
+    }
+    $offerId = $request->input('offer_id');
+    $provider = $request->input('provider');
+
+    \App\Models\OfferClick::create([
+        'user_id' => auth()->id(),
+        'offer_id' => $offerId ? (string)$offerId : null,
+        'provider' => $provider ? (string)$provider : null,
+        'ip' => ip(),
+        'clicked_at' => now(),
+    ]);
+
+    return response()->json(['status' => 'success']);
+})->name('offers.track-click');
+
 /* API Postback endpoints */
 Route::group(['prefix' => 'api/postback'], function () {
     Route::any('/clickwall', [\App\Http\Controllers\Postback\PostbackController::class, 'clickwall']);

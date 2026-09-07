@@ -92,8 +92,26 @@ class Offers extends Component
                 return $query->orderBy('points', 'asc');
             })->when($this->provider, function ($query) {
                 return $query->where('provider', $this->provider);
+            })->when((!auth()->check() || (auth()->user()->level ?? 0) < 9), function ($query) {
+                return $query->where('provider', '!=', 'CPAGrip');
             })->when($this->category, function ($query) {
-                return $query->whereJsonContains('categories', $this->category);
+                $cat = strtolower($this->category);
+                if (in_array($cat, ['android', 'ios', 'desktop', 'web'])) {
+                    $device = match ($cat) {
+                        'android' => 'Android',
+                        'ios' => 'iOS',
+                        'web', 'desktop' => 'Desktop',
+                        default => $this->category,
+                    };
+                    return $query->where(function ($q) use ($device) {
+                        $q->whereJsonContains('categories', $this->category)
+                          ->orWhereJsonContains('devices', $device);
+                    });
+                }
+                return $query->where(function ($q) {
+                    $q->whereJsonContains('categories', $this->category)
+                      ->orWhere('title', 'like', '%' . $this->category . '%');
+                });
             })->when(count($this->devices), function ($query) {
                 return $query->where(function ($query) {
                     foreach ($this->devices as $device) {

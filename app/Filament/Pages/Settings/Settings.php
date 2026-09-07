@@ -156,9 +156,19 @@ class Settings extends BaseSettings
                         ]),
                     Tabs\Tab::make('Referral')
                         ->schema([
-                            Checkbox::make('referral.enable_rewards'),
+                            Checkbox::make('referral.enable_rewards')
+                                ->label('Enable Referral Rewards'),
                             TextInput::make('referral.points')
-                                ->helperText("Points to be awarded to the referrer when a referred user signs up."),
+                                ->numeric()
+                                ->default(100)
+                                ->label('Signup Referral Points')
+                                ->helperText("Points awarded to both referrer and new user upon signup with referral code."),
+                            TextInput::make('referral.commission_percentage')
+                                ->numeric()
+                                ->default(5)
+                                ->suffix('%')
+                                ->label('Referral Commission Percentage')
+                                ->helperText("Percentage of offer earnings awarded to the referrer for life (default 5%)."),
                         ]),
                     Tabs\Tab::make('Levels')
                         ->schema([

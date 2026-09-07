@@ -332,6 +332,38 @@ abstract class Postback
     protected function saveLead($data)
     {
         $user = User::findOrFail($data['user_id']);
+
+        // Anti-Fraud Lead Time Calculation
+        $leadTimeSeconds = null;
+        $clickedAt = null;
+        $offerId = $data['campaign_id'] ?? null;
+        $company = $data['company'] ?? null;
+
+        try {
+            $clickQuery = \App\Models\OfferClick::where('user_id', $user->id);
+            if ($offerId) {
+                $clickQuery->where(function ($q) use ($offerId, $company) {
+                    $q->where('offer_id', (string)$offerId);
+                    if ($company) {
+                        $q->orWhere('provider', $company);
+                    }
+                });
+            } elseif ($company) {
+                $clickQuery->where('provider', $company);
+            }
+            $latestClick = $clickQuery->latest('clicked_at')->first();
+
+            if ($latestClick && $latestClick->clicked_at) {
+                $clickedAt = $latestClick->clicked_at;
+                $leadTimeSeconds = max(1, (int)now()->diffInSeconds($clickedAt));
+            } elseif (!empty($data['click_time'])) {
+                $clickedAt = \Carbon\Carbon::parse($data['click_time']);
+                $leadTimeSeconds = max(1, (int)now()->diffInSeconds($clickedAt));
+            }
+        } catch (\Throwable $e) {
+            \Log::channel('postback')->warning('Lead time calculation error: ' . $e->getMessage());
+        }
+
         $user->leads()->create([
             'provider' => $data['company'],
             'name' => $this->getHandledName($data),
@@ -344,6 +376,8 @@ abstract class Postback
             'country_code' => $this->getCountryCode($data),
             'type' => 'offer',
             'status' => isset($data['pending']) ? 'pending' : 'approved',
+            'lead_time_seconds' => $leadTimeSeconds,
+            'clicked_at' => $clickedAt,
             'release_at' => $data['release_at'] ?? null,
             'hold_duration_days' => $data['hold_duration_days'] ?? null,
         ]);

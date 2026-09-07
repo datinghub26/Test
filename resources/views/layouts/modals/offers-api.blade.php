@@ -25,6 +25,23 @@
                 return [trimmed.replace(/^\d+[\.\)]\s*/, '')];
             }
             return [];
+        },
+        trackOfferClick(off) {
+            let targetOffer = off || this.offer;
+            if (!targetOffer) return;
+            try {
+                fetch('{{ route('offers.track-click') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        offer_id: targetOffer.id || targetOffer.offer_id,
+                        provider: targetOffer.provider || ''
+                    })
+                });
+            } catch(e) {}
         }
     }"
     x-on:update-coins.window="is_coin = $event.detail.isCoin"
@@ -136,6 +153,7 @@
                             <div class="mt-auto mt-md-4">
                                 <a class="btn btn-primary w-100"
                                    :href="offer?.link ? offer?.link.replace('{user_id}', '{{ auth()->id() }}') : '#'"
+                                   @click="trackOfferClick(offer)"
                                    target="_blank">
                                     <i class="fa-solid fa-play me-2"></i>
                                     Start Offer

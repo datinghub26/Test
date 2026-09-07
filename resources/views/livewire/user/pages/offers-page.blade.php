@@ -132,6 +132,40 @@
                 </div>
             </div>
 
+            <!-- Category Navigation (Web, Android, CPI, iOS, Games) -->
+            <div class="d-flex align-items-center flex-wrap gap-2 mt-3 pt-3 border-top border-secondary border-opacity-25">
+                <button type="button"
+                        @class(['btn btn-sm rounded-pill px-3', 'btn-primary' => empty($category), 'btn-dark text-secondary' => !empty($category)])
+                        wire:click="$set('category', '')">
+                    <i class="fa-solid fa-border-all me-1"></i> All
+                </button>
+                <button type="button"
+                        @class(['btn btn-sm rounded-pill px-3', 'btn-primary' => strtolower($category) === 'web', 'btn-dark text-secondary' => strtolower($category) !== 'web'])
+                        wire:click="$set('category', 'Web')">
+                    <i class="fa-solid fa-laptop me-1"></i> Web / Desktop
+                </button>
+                <button type="button"
+                        @class(['btn btn-sm rounded-pill px-3', 'btn-primary' => strtolower($category) === 'android', 'btn-dark text-secondary' => strtolower($category) !== 'android'])
+                        wire:click="$set('category', 'Android')">
+                    <i class="fa-brands fa-android me-1"></i> Android
+                </button>
+                <button type="button"
+                        @class(['btn btn-sm rounded-pill px-3', 'btn-primary' => strtolower($category) === 'ios', 'btn-dark text-secondary' => strtolower($category) !== 'ios'])
+                        wire:click="$set('category', 'iOS')">
+                    <i class="fa-brands fa-apple me-1"></i> iOS
+                </button>
+                <button type="button"
+                        @class(['btn btn-sm rounded-pill px-3', 'btn-primary' => strtolower($category) === 'cpi', 'btn-dark text-secondary' => strtolower($category) !== 'cpi'])
+                        wire:click="$set('category', 'CPI')">
+                    <i class="fa-solid fa-mobile-screen-button me-1"></i> CPI
+                </button>
+                <button type="button"
+                        @class(['btn btn-sm rounded-pill px-3', 'btn-primary' => strtolower($category) === 'games', 'btn-dark text-secondary' => strtolower($category) !== 'games'])
+                        wire:click="$set('category', 'Games')">
+                    <i class="fa-solid fa-gamepad me-1"></i> Games
+                </button>
+            </div>
+
             <livewire:user.offers :sort="$sort" :search="$search" :provider="$this->provider" :devices="$devices"
                                   :category="$category"/>
         </div>
