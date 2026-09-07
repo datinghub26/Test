@@ -41,7 +41,7 @@ class LiveCashouts extends Component
         foreach ($newLeads->reverse() as $lead) {
             $formatted = $this->formatLeadItem($lead);
             array_unshift($this->activities, $formatted);
-            if (count($this->activities) > 40) {
+            if (count($this->activities) > 20) {
                 array_pop($this->activities);
             }
             $this->dispatch('live-activity-prepend', newActivity: $formatted);
@@ -61,7 +61,7 @@ class LiveCashouts extends Component
                 ->where('status', 'approved')
                 ->with(['user', 'offer'])
                 ->latest('created_at')
-                ->limit(25)
+                ->limit(20)
                 ->get();
 
             $withdrawals = CashoutRequest::where('status', 'approved')
@@ -69,13 +69,13 @@ class LiveCashouts extends Component
                 ->selectRaw("cashout_requests.id, cashout_requests.method_name as name, cashout_requests.amount, cashout_requests.method_image, cashout_requests.created_at, cashout_requests.updated_at, cashout_requests.user_id, cashout_methods.bg_color as bg_color")
                 ->with('user')
                 ->latest('cashout_requests.created_at')
-                ->limit(25)
+                ->limit(20)
                 ->get();
 
             $formattedLeads = $leads->map(fn($item) => $this->formatLeadItem($item));
             $formattedCashouts = $withdrawals->map(fn($item) => $this->formatCashoutItem($item));
 
-            $merged = $formattedLeads->merge($formattedCashouts)->sortByDesc('timestamp');
+            $merged = $formattedLeads->merge($formattedCashouts)->sortByDesc('timestamp')->take(20);
             return $merged->values()->all();
         } catch (\Throwable $e) {
             return [];

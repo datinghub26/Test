@@ -153,17 +153,16 @@
                  :class="{ 'is-grabbing': isDown }"
                  @mousedown="onMouseDown($event)"
                  @mousemove="onMouseMove($event)"
-                 @mouseup="onMouseUp()"
+                 @mouseup.window="onMouseUp()"
                  @mouseleave="onMouseLeave()"
-                 @mouseenter="isPaused = true;"
                  @wheel.prevent="onWheel($event)"
-                 @scroll="onScroll()"
-                 @touchstart="onTouchStart($event)"
-                 @touchmove="onTouchMove($event)"
-                 @touchend="onTouchEnd()">
+                 @scroll.passive="onScroll()"
+                 @touchstart.passive="onTouchStart($event)"
+                 @touchmove.passive="onTouchMove($event)"
+                 @touchend.passive="onTouchEnd()">
                 <div class="live-stream-track" x-ref="track" wire:ignore.self>
-                    {{-- Set 1 (Prepend items) --}}
-                    <template x-for="item in prependItems" :key="'prep-' + item.id">
+                    {{-- Prepend items (dynamically added at first on left side) --}}
+                    <template x-for="item in prependItems" :key="'prep-' + item.type + '-' + item.id">
                         <div class="card live-card-item text-white px-3 py-1 activity-is-new"
                              :class="{ 'active-card': activeCard && activeCard.id == item.id && activeCard.type == item.type }"
                              @click="onDataCardClick(item, $event.currentTarget)">
@@ -194,47 +193,45 @@
                         </div>
                     </template>
 
-                    {{-- Server Rendered Blade Sets --}}
+                    {{-- Server Rendered Blade Items (strictly 1 set, max 20) --}}
                     @if(count($activities) > 0)
-                        @for($set = 0; $set < 2; $set++)
-                            @foreach($activities as $item)
-                                <div class="card live-card-item text-white px-3 py-1"
-                                     data-id="{{ $item['id'] }}"
-                                     data-type="{{ $item['type'] }}"
-                                     data-user-id="{{ $item['user_id'] }}"
-                                     data-username="{{ $item['username'] }}"
-                                     data-avatar="{{ $item['avatar'] }}"
-                                     data-wall="{{ $item['wall'] }}"
-                                     data-offer="{{ $item['offer'] }}"
-                                     data-amount="{{ $item['amount'] }}"
-                                     :class="{ 'active-card': activeCard && activeCard.id == '{{ $item['id'] }}' && activeCard.type == '{{ $item['type'] }}' }"
-                                     @click="onCardClick($event.currentTarget)">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div class="d-flex justify-content-center rounded-2 align-items-center overflow-hidden flex-shrink-0"
-                                             style="width: 28px; height: 28px; {{ $item['bg_color'] ? 'background-color: ' . $item['bg_color'] . ' !important;' : 'background-color: rgba(255,255,255,0.08);' }}">
-                                            <img height="100%"
-                                                 width="100%"
-                                                 class="object-fit-contain"
-                                                 src="{{ $item['image'] ?: $item['avatar'] }}"
-                                                 onerror="this.onerror=null; this.src='{{ asset('assets/img/icon-light.png') }}';"
-                                                 alt="{{ $item['wall'] }}">
-                                        </div>
+                        @foreach($activities as $item)
+                            <div class="card live-card-item text-white px-3 py-1"
+                                 data-id="{{ $item['id'] }}"
+                                 data-type="{{ $item['type'] }}"
+                                 data-user-id="{{ $item['user_id'] }}"
+                                 data-username="{{ $item['username'] }}"
+                                 data-avatar="{{ $item['avatar'] }}"
+                                 data-wall="{{ $item['wall'] }}"
+                                 data-offer="{{ $item['offer'] }}"
+                                 data-amount="{{ $item['amount'] }}"
+                                 :class="{ 'active-card': activeCard && activeCard.id == '{{ $item['id'] }}' && activeCard.type == '{{ $item['type'] }}' }"
+                                 @click="onCardClick($event.currentTarget)">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="d-flex justify-content-center rounded-2 align-items-center overflow-hidden flex-shrink-0"
+                                         style="width: 28px; height: 28px; {{ $item['bg_color'] ? 'background-color: ' . $item['bg_color'] . ' !important;' : 'background-color: rgba(255,255,255,0.08);' }}">
+                                        <img height="100%"
+                                             width="100%"
+                                             class="object-fit-contain"
+                                             src="{{ $item['image'] ?: $item['avatar'] }}"
+                                             onerror="this.onerror=null; this.src='{{ asset('assets/img/icon-light.png') }}';"
+                                             alt="{{ $item['wall'] }}">
+                                    </div>
 
-                                        <div class="d-flex flex-column text-start overflow-hidden" style="min-width: 80px; max-width: 125px;">
-                                            <span class="mb-0 text-truncate text-white fw-semibold" style="font-size: 12px; line-height: 1.2;">{{ $item['wall'] }}</span>
-                                            <span class="text-secondary text-truncate" style="font-size: 11px; line-height: 1.2;">{{ $item['username'] }}</span>
-                                        </div>
+                                    <div class="d-flex flex-column text-start overflow-hidden" style="min-width: 80px; max-width: 125px;">
+                                        <span class="mb-0 text-truncate text-white fw-semibold" style="font-size: 12px; line-height: 1.2;">{{ $item['wall'] }}</span>
+                                        <span class="text-secondary text-truncate" style="font-size: 11px; line-height: 1.2;">{{ $item['username'] }}</span>
+                                    </div>
 
-                                        <div class="ms-auto flex-shrink-0">
-                                            <span class="rounded-pill badge live-cashout-badge d-flex align-items-center gap-1 px-2 py-1">
-                                                <img src="{{ asset('assets/img/coin.png') }}?v=2" x-show="is_coin !== '0'" width="13px" height="13px" style="object-fit: contain;" alt="ERC">
-                                                <span style="font-size: 11px;" x-text="formatCoins('{{ $item['amount'] }}')">{{ number_format($item['amount']) }}</span>
-                                            </span>
-                                        </div>
+                                    <div class="ms-auto flex-shrink-0">
+                                        <span class="rounded-pill badge live-cashout-badge d-flex align-items-center gap-1 px-2 py-1">
+                                            <img src="{{ asset('assets/img/coin.png') }}?v=2" x-show="is_coin !== '0'" width="13px" height="13px" style="object-fit: contain;" alt="ERC">
+                                            <span style="font-size: 11px;" x-text="formatCoins('{{ $item['amount'] }}')">{{ number_format($item['amount']) }}</span>
+                                        </span>
                                     </div>
                                 </div>
-                            @endforeach
-                        @endfor
+                            </div>
+                        @endforeach
                     @endif
                 </div>
             </div>
@@ -301,16 +298,10 @@
 
         Alpine.data('liveActivityTicker', () => ({
             is_coin: (typeof localStorage !== 'undefined' ? localStorage.getItem('isCoin') || '1' : '1'),
-            isPaused: false,
             isDown: false,
             isDragging: false,
             startX: 0,
             scrollStart: 0,
-            scrollPos: 0,
-            speed: 0.75,
-            rafId: null,
-            lastTime: null,
-            wheelTimer: null,
             touchStartX: null,
             activeCard: null,
             popoverLeft: 0,
@@ -319,11 +310,8 @@
             prependItems: [],
 
             init() {
-                this.scrollPos = this.$refs.viewport ? this.$refs.viewport.scrollLeft : 0;
-                this.startAutoScroll();
-
                 window.addEventListener('live-activity-prepend', (e) => {
-                    this.prependActivity(e.detail.newActivity);
+                    this.prependActivity(e.detail?.newActivity);
                 });
 
                 window.addEventListener('update-coins', (e) => {
@@ -345,6 +333,12 @@
                 window.addEventListener('activity-modal-closed', () => {
                     this.closePopover();
                 });
+
+                setInterval(() => {
+                    if (this.$wire && typeof this.$wire.checkNewActivity === 'function') {
+                        this.$wire.checkNewActivity();
+                    }
+                }, 25000);
             },
 
             formatCoins(val) {
@@ -363,45 +357,12 @@
                 return num.toLocaleString() + ' ERC';
             },
 
-            startAutoScroll() {
-                if (this.rafId) cancelAnimationFrame(this.rafId);
-
-                const loop = (timestamp) => {
-                    if (!this.lastTime) this.lastTime = timestamp;
-                    const rawDelta = (timestamp - this.lastTime) / 1000;
-                    this.lastTime = timestamp;
-
-                    const delta = Math.min(rawDelta, 0.05);
-
-                    if (!this.isPaused && !this.isDown && !this.activeCard && this.$refs.viewport) {
-                        const vp = this.$refs.viewport;
-                        const halfWidth = vp.scrollWidth / 2;
-
-                        if (halfWidth > 0) {
-                            this.scrollPos += (this.speed * 60) * delta;
-
-                            if (this.scrollPos >= halfWidth) {
-                                this.scrollPos -= halfWidth;
-                                vp.scrollLeft = Math.floor(this.scrollPos);
-                            } else {
-                                vp.scrollLeft = Math.floor(this.scrollPos);
-                            }
-                        }
-                    }
-
-                    this.rafId = requestAnimationFrame(loop);
-                };
-
-                this.rafId = requestAnimationFrame(loop);
-            },
-
             onMouseDown(e) {
                 if (e.button !== 0 || !this.$refs.viewport) return;
                 this.isDown = true;
                 this.isDragging = false;
                 this.startX = e.pageX - this.$refs.viewport.offsetLeft;
                 this.scrollStart = this.$refs.viewport.scrollLeft;
-                this.scrollPos = this.$refs.viewport.scrollLeft;
             },
 
             onMouseMove(e) {
@@ -412,47 +373,35 @@
                     this.isDragging = true;
                 }
                 this.$refs.viewport.scrollLeft = this.scrollStart - walk;
-                this.scrollPos = this.$refs.viewport.scrollLeft;
             },
 
             onMouseUp() {
+                if (!this.isDown) return;
                 this.isDown = false;
                 setTimeout(() => {
                     this.isDragging = false;
-                }, 70);
+                }, 80);
             },
 
             onMouseLeave() {
                 this.onMouseUp();
-                if (!this.activeCard && this.$refs.viewport) {
-                    this.scrollPos = this.$refs.viewport.scrollLeft;
-                    this.isPaused = false;
-                }
             },
 
             onWheel(e) {
                 if (!this.$refs.viewport) return;
-                this.isPaused = true;
-                this.$refs.viewport.scrollLeft += (e.deltaY || e.deltaX);
-                this.scrollPos = this.$refs.viewport.scrollLeft;
-
-                clearTimeout(this.wheelTimer);
-                this.wheelTimer = setTimeout(() => {
-                    if (!this.activeCard && this.$refs.viewport) {
-                        this.scrollPos = this.$refs.viewport.scrollLeft;
-                        this.isPaused = false;
-                    }
-                }, 1200);
+                if (this.activeCard) this.closePopover();
+                const delta = e.deltaX !== 0 ? e.deltaX : e.deltaY;
+                this.$refs.viewport.scrollLeft += delta;
             },
 
             onScroll() {
-                if ((this.isDown || this.isPaused) && this.$refs.viewport) {
-                    this.scrollPos = this.$refs.viewport.scrollLeft;
+                if (this.activeCard) {
+                    this.closePopover();
                 }
             },
 
             onTouchStart(e) {
-                this.isPaused = true;
+                this.isDragging = false;
                 if (e.touches && e.touches[0]) {
                     this.touchStartX = e.touches[0].clientX;
                 }
@@ -470,11 +419,7 @@
                 setTimeout(() => {
                     this.isDragging = false;
                     this.touchStartX = null;
-                    if (!this.activeCard && this.$refs.viewport) {
-                        this.scrollPos = this.$refs.viewport.scrollLeft;
-                        this.isPaused = false;
-                    }
-                }, 150);
+                }, 120);
             },
 
             onCardClick(cardEl) {
@@ -499,7 +444,6 @@
                     amount: cardEl.dataset.amount
                 };
 
-                this.isPaused = true;
                 this.$nextTick(() => {
                     this.positionPopover(cardEl);
                 });
@@ -514,7 +458,6 @@
                 }
 
                 this.activeCard = item;
-                this.isPaused = true;
                 this.$nextTick(() => {
                     this.positionPopover(cardEl);
                 });
@@ -542,10 +485,6 @@
 
             closePopover() {
                 this.activeCard = null;
-                if (this.$refs.viewport) {
-                    this.scrollPos = this.$refs.viewport.scrollLeft;
-                }
-                this.isPaused = false;
             },
 
             prependActivity(data) {
@@ -554,13 +493,24 @@
                 if (exists) return;
 
                 this.prependItems.unshift(data);
-                if (this.prependItems.length > 25) {
+                if (this.prependItems.length > 20) {
                     this.prependItems.pop();
                 }
 
+                this.$nextTick(() => {
+                    const track = this.$refs.track;
+                    if (track) {
+                        const cards = track.querySelectorAll('.live-card-item');
+                        if (cards.length > 20) {
+                            for (let i = 20; i < cards.length; i++) {
+                                cards[i].remove();
+                            }
+                        }
+                    }
+                });
+
                 if (this.$refs.viewport) {
                     this.$refs.viewport.scrollTo({ left: 0, behavior: 'smooth' });
-                    this.scrollPos = 0;
                 }
             }
         }));
