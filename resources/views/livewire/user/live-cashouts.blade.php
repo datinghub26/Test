@@ -133,290 +133,8 @@
 </style>
 @endassets
 
-<div wire:poll.30s="checkNewActivity">
-    <div class="container-fluid"
-         x-data="{
-             is_coin: (typeof localStorage !== 'undefined' ? localStorage.getItem('isCoin') || '1' : '1'),
-             isPaused: false,
-             isDown: false,
-             isDragging: false,
-             startX: 0,
-             scrollStart: 0,
-             scrollPos: 0,
-             speed: 0.75,
-             rafId: null,
-             lastTime: null,
-             wheelTimer: null,
-             touchStartX: null,
-             activeCard: null,
-             popoverLeft: 0,
-             popoverTop: 0,
-             arrowLeft: '50%',
-
-             init() {
-                 this.scrollPos = this.$refs.viewport ? this.$refs.viewport.scrollLeft : 0;
-                 this.startAutoScroll();
-
-                 window.addEventListener('live-activity-prepend', (e) => {
-                     this.prependActivity(e.detail.newActivity);
-                 });
-
-                 window.addEventListener('update-coins', (e) => {
-                     if (e.detail && typeof e.detail.isCoin !== 'undefined') {
-                         this.is_coin = String(e.detail.isCoin);
-                     }
-                 });
-
-                 window.addEventListener('resize', () => {
-                     if (this.activeCard) this.closePopover();
-                 });
-
-                 window.addEventListener('hidden.bs.modal', (e) => {
-                     if (!e.target || e.target.id === 'activityModal') {
-                         this.closePopover();
-                     }
-                 });
-
-                 window.addEventListener('activity-modal-closed', () => {
-                     this.closePopover();
-                 });
-             },
-
-             formatCoins(val) {
-                 const num = Number(val) || 0;
-                 if (this.is_coin === '0') {
-                     return '$' + (num / 1000).toFixed(2);
-                 }
-                 return num.toLocaleString();
-             },
-
-             formatReward(val) {
-                 const num = Number(val) || 0;
-                 if (this.is_coin === '0') {
-                     return '$' + (num / 1000).toFixed(2);
-                 }
-                 return num.toLocaleString() + ' ERC';
-             },
-
-             startAutoScroll() {
-                 if (this.rafId) cancelAnimationFrame(this.rafId);
-
-                 const loop = (timestamp) => {
-                     if (!this.lastTime) this.lastTime = timestamp;
-                     const rawDelta = (timestamp - this.lastTime) / 1000;
-                     this.lastTime = timestamp;
-
-                     const delta = Math.min(rawDelta, 0.05);
-
-                     if (!this.isPaused && !this.isDown && !this.activeCard && this.$refs.viewport) {
-                         const vp = this.$refs.viewport;
-                         const halfWidth = vp.scrollWidth / 2;
-
-                         if (halfWidth > 0) {
-                             this.scrollPos += (this.speed * 60) * delta;
-
-                             if (this.scrollPos >= halfWidth) {
-                                 this.scrollPos -= halfWidth;
-                                 vp.scrollLeft = Math.floor(this.scrollPos);
-                             } else {
-                                 vp.scrollLeft = Math.floor(this.scrollPos);
-                             }
-                         }
-                     }
-
-                     this.rafId = requestAnimationFrame(loop);
-                 };
-
-                 this.rafId = requestAnimationFrame(loop);
-             },
-
-             onMouseDown(e) {
-                 if (e.button !== 0 || !this.$refs.viewport) return;
-                 this.isDown = true;
-                 this.isDragging = false;
-                 this.startX = e.pageX - this.$refs.viewport.offsetLeft;
-                 this.scrollStart = this.$refs.viewport.scrollLeft;
-                 this.scrollPos = this.$refs.viewport.scrollLeft;
-             },
-
-             onMouseMove(e) {
-                 if (!this.isDown || !this.$refs.viewport) return;
-                 const x = e.pageX - this.$refs.viewport.offsetLeft;
-                 const walk = (x - this.startX);
-                 if (Math.abs(walk) > 4) {
-                     this.isDragging = true;
-                 }
-                 this.$refs.viewport.scrollLeft = this.scrollStart - walk;
-                 this.scrollPos = this.$refs.viewport.scrollLeft;
-             },
-
-             onMouseUp() {
-                 this.isDown = false;
-                 setTimeout(() => {
-                     this.isDragging = false;
-                 }, 70);
-             },
-
-             onMouseLeave() {
-                 this.onMouseUp();
-                 if (!this.activeCard && this.$refs.viewport) {
-                     this.scrollPos = this.$refs.viewport.scrollLeft;
-                     this.isPaused = false;
-                 }
-             },
-
-             onWheel(e) {
-                 if (!this.$refs.viewport) return;
-                 this.isPaused = true;
-                 this.$refs.viewport.scrollLeft += (e.deltaY || e.deltaX);
-                 this.scrollPos = this.$refs.viewport.scrollLeft;
-
-                 clearTimeout(this.wheelTimer);
-                 this.wheelTimer = setTimeout(() => {
-                     if (!this.activeCard && this.$refs.viewport) {
-                         this.scrollPos = this.$refs.viewport.scrollLeft;
-                         this.isPaused = false;
-                     }
-                 }, 1200);
-             },
-
-             onScroll() {
-                 if ((this.isDown || this.isPaused) && this.$refs.viewport) {
-                     this.scrollPos = this.$refs.viewport.scrollLeft;
-                 }
-             },
-
-             onTouchStart(e) {
-                 this.isPaused = true;
-                 if (e.touches && e.touches[0]) {
-                     this.touchStartX = e.touches[0].clientX;
-                 }
-             },
-
-             onTouchMove(e) {
-                 if (e.touches && e.touches[0] && this.touchStartX !== null) {
-                     if (Math.abs(e.touches[0].clientX - this.touchStartX) > 6) {
-                         this.isDragging = true;
-                     }
-                 }
-             },
-
-             onTouchEnd() {
-                 setTimeout(() => {
-                     this.isDragging = false;
-                     this.touchStartX = null;
-                     if (!this.activeCard && this.$refs.viewport) {
-                         this.scrollPos = this.$refs.viewport.scrollLeft;
-                         this.isPaused = false;
-                     }
-                 }, 150);
-             },
-
-             onCardClick(cardEl) {
-                 if (this.isDragging) return;
-
-                 const id = cardEl.dataset.id;
-                 const type = cardEl.dataset.type;
-
-                 if (this.activeCard && this.activeCard.id === id && this.activeCard.type === type) {
-                     this.closePopover();
-                     return;
-                 }
-
-                 this.activeCard = {
-                     id: id,
-                     type: type,
-                     user_id: cardEl.dataset.userId,
-                     username: cardEl.dataset.username,
-                     avatar: cardEl.dataset.avatar,
-                     wall: cardEl.dataset.wall,
-                     offer: cardEl.dataset.offer,
-                     amount: cardEl.dataset.amount
-                 };
-
-                 this.isPaused = true;
-                 this.$nextTick(() => {
-                     this.positionPopover(cardEl);
-                 });
-             },
-
-             positionPopover(cardEl) {
-                 if (!cardEl || !this.$refs.container) return;
-                 const cardRect = cardEl.getBoundingClientRect();
-                 const containerRect = this.$refs.container.getBoundingClientRect();
-
-                 const cardCenter = (cardRect.left - containerRect.left) + (cardRect.width / 2);
-                 const popoverWidth = 270;
-                 const halfWidth = popoverWidth / 2;
-
-                 const minLeft = halfWidth + 8;
-                 const maxLeft = containerRect.width - halfWidth - 8;
-                 const clampedCenter = Math.max(minLeft, Math.min(maxLeft, cardCenter));
-
-                 this.popoverLeft = clampedCenter;
-                 this.popoverTop = (cardRect.bottom - containerRect.top) + 8;
-
-                 const arrowOffset = cardCenter - (clampedCenter - halfWidth);
-                 this.arrowLeft = `${Math.max(16, Math.min(popoverWidth - 16, arrowOffset))}px`;
-             },
-
-             closePopover() {
-                 this.activeCard = null;
-                 if (this.$refs.viewport) {
-                     this.scrollPos = this.$refs.viewport.scrollLeft;
-                 }
-                 this.isPaused = false;
-             },
-
-             prependActivity(data) {
-                 if (!data || !this.$refs.track) return;
-                 const card = document.createElement('div');
-                 card.className = 'card live-card-item text-white px-3 py-1 activity-is-new';
-                 card.dataset.id = data.id;
-                 card.dataset.type = data.type;
-                 card.dataset.userId = data.user_id;
-                 card.dataset.username = data.username;
-                 card.dataset.avatar = data.avatar;
-                 card.dataset.wall = data.wall;
-                 card.dataset.offer = data.offer;
-                 card.dataset.amount = data.amount;
-
-                 const bgStyle = data.bg_color ? `background-color: ${data.bg_color} !important;` : 'background-color: rgba(255,255,255,0.08);';
-                 const imgSrc = data.image || data.avatar;
-                 const formattedAmt = this.formatCoins(data.amount);
-
-                 card.innerHTML = `
-                     <div class="d-flex align-items-center gap-2">
-                         <div class="d-flex justify-content-center rounded-2 align-items-center overflow-hidden flex-shrink-0"
-                              style="width: 28px; height: 28px; ${bgStyle}">
-                             <img height="100%" width="100%" class="object-fit-contain" src="${imgSrc}"
-                                  onerror="this.onerror=null; this.src='{{ asset('assets/img/icon-light.png') }}';" alt="${data.wall}">
-                         </div>
-                         <div class="d-flex flex-column text-start overflow-hidden" style="min-width: 80px; max-width: 125px;">
-                             <span class="mb-0 text-truncate text-white fw-semibold" style="font-size: 12px; line-height: 1.2;">${data.wall}</span>
-                             <span class="text-secondary text-truncate" style="font-size: 11px; line-height: 1.2;">${data.username}</span>
-                         </div>
-                         <div class="ms-auto flex-shrink-0">
-                             <span class="rounded-pill badge live-cashout-badge d-flex align-items-center gap-1 px-2 py-1">
-                                 <img src="{{ asset('assets/img/coin.png') }}?v=2" style="${this.is_coin === '0' ? 'display:none;' : ''} width: 13px; height: 13px; object-fit: contain;" alt="ERC">
-                                 <span style="font-size: 11px;">${formattedAmt}</span>
-                             </span>
-                         </div>
-                     </div>
-                 `;
-
-                 card.addEventListener('click', () => {
-                     this.onCardClick(card);
-                 });
-
-                 this.$refs.track.insertBefore(card, this.$refs.track.firstChild);
-
-                 if (this.$refs.viewport) {
-                     this.$refs.viewport.scrollTo({ left: 0, behavior: 'smooth' });
-                     this.scrollPos = 0;
-                 }
-             }
-         }">
+<div>
+    <div class="container-fluid" x-data="liveActivityTicker()">
         <div class="d-flex align-items-center mt-2 position-relative gap-2 live-activity-container"
              x-ref="container">
             <!-- Pinned Live Indicator Badge -->
@@ -444,6 +162,39 @@
                  @touchmove="onTouchMove($event)"
                  @touchend="onTouchEnd()">
                 <div class="live-stream-track" x-ref="track" wire:ignore.self>
+                    {{-- Set 1 (Prepend items) --}}
+                    <template x-for="item in prependItems" :key="'prep-' + item.id">
+                        <div class="card live-card-item text-white px-3 py-1 activity-is-new"
+                             :class="{ 'active-card': activeCard && activeCard.id == item.id && activeCard.type == item.type }"
+                             @click="onDataCardClick(item, $event.currentTarget)">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="d-flex justify-content-center rounded-2 align-items-center overflow-hidden flex-shrink-0"
+                                     style="width: 28px; height: 28px;"
+                                     :style="item.bg_color ? `background-color: ${item.bg_color} !important;` : 'background-color: rgba(255,255,255,0.08);'">
+                                    <img height="100%"
+                                         width="100%"
+                                         class="object-fit-contain"
+                                         :src="item.image || item.avatar"
+                                         onerror="this.onerror=null; this.src='{{ asset('assets/img/icon-light.png') }}';"
+                                         :alt="item.wall">
+                                </div>
+
+                                <div class="d-flex flex-column text-start overflow-hidden" style="min-width: 80px; max-width: 125px;">
+                                    <span class="mb-0 text-truncate text-white fw-semibold" style="font-size: 12px; line-height: 1.2;" x-text="item.wall"></span>
+                                    <span class="text-secondary text-truncate" style="font-size: 11px; line-height: 1.2;" x-text="item.username"></span>
+                                </div>
+
+                                <div class="ms-auto flex-shrink-0">
+                                    <span class="rounded-pill badge live-cashout-badge d-flex align-items-center gap-1 px-2 py-1">
+                                        <img src="{{ asset('assets/img/coin.png') }}?v=2" x-show="is_coin !== '0'" width="13px" height="13px" style="object-fit: contain;" alt="ERC">
+                                        <span style="font-size: 11px;" x-text="formatCoins(item.amount)"></span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    {{-- Server Rendered Blade Sets --}}
                     @if(count($activities) > 0)
                         @for($set = 0; $set < 2; $set++)
                             @foreach($activities as $item)
@@ -542,3 +293,283 @@
         </div>
     </div>
 </div>
+
+<script>
+(function() {
+    function initLiveTicker() {
+        if (typeof Alpine === 'undefined') return;
+
+        Alpine.data('liveActivityTicker', () => ({
+            is_coin: (typeof localStorage !== 'undefined' ? localStorage.getItem('isCoin') || '1' : '1'),
+            isPaused: false,
+            isDown: false,
+            isDragging: false,
+            startX: 0,
+            scrollStart: 0,
+            scrollPos: 0,
+            speed: 0.75,
+            rafId: null,
+            lastTime: null,
+            wheelTimer: null,
+            touchStartX: null,
+            activeCard: null,
+            popoverLeft: 0,
+            popoverTop: 0,
+            arrowLeft: '50%',
+            prependItems: [],
+
+            init() {
+                this.scrollPos = this.$refs.viewport ? this.$refs.viewport.scrollLeft : 0;
+                this.startAutoScroll();
+
+                window.addEventListener('live-activity-prepend', (e) => {
+                    this.prependActivity(e.detail.newActivity);
+                });
+
+                window.addEventListener('update-coins', (e) => {
+                    if (e.detail && typeof e.detail.isCoin !== 'undefined') {
+                        this.is_coin = String(e.detail.isCoin);
+                    }
+                });
+
+                window.addEventListener('resize', () => {
+                    if (this.activeCard) this.closePopover();
+                });
+
+                window.addEventListener('hidden.bs.modal', (e) => {
+                    if (!e.target || e.target.id === 'activityModal') {
+                        this.closePopover();
+                    }
+                });
+
+                window.addEventListener('activity-modal-closed', () => {
+                    this.closePopover();
+                });
+            },
+
+            formatCoins(val) {
+                const num = Number(val) || 0;
+                if (this.is_coin === '0') {
+                    return '$' + (num / 1000).toFixed(2);
+                }
+                return num.toLocaleString();
+            },
+
+            formatReward(val) {
+                const num = Number(val) || 0;
+                if (this.is_coin === '0') {
+                    return '$' + (num / 1000).toFixed(2);
+                }
+                return num.toLocaleString() + ' ERC';
+            },
+
+            startAutoScroll() {
+                if (this.rafId) cancelAnimationFrame(this.rafId);
+
+                const loop = (timestamp) => {
+                    if (!this.lastTime) this.lastTime = timestamp;
+                    const rawDelta = (timestamp - this.lastTime) / 1000;
+                    this.lastTime = timestamp;
+
+                    const delta = Math.min(rawDelta, 0.05);
+
+                    if (!this.isPaused && !this.isDown && !this.activeCard && this.$refs.viewport) {
+                        const vp = this.$refs.viewport;
+                        const halfWidth = vp.scrollWidth / 2;
+
+                        if (halfWidth > 0) {
+                            this.scrollPos += (this.speed * 60) * delta;
+
+                            if (this.scrollPos >= halfWidth) {
+                                this.scrollPos -= halfWidth;
+                                vp.scrollLeft = Math.floor(this.scrollPos);
+                            } else {
+                                vp.scrollLeft = Math.floor(this.scrollPos);
+                            }
+                        }
+                    }
+
+                    this.rafId = requestAnimationFrame(loop);
+                };
+
+                this.rafId = requestAnimationFrame(loop);
+            },
+
+            onMouseDown(e) {
+                if (e.button !== 0 || !this.$refs.viewport) return;
+                this.isDown = true;
+                this.isDragging = false;
+                this.startX = e.pageX - this.$refs.viewport.offsetLeft;
+                this.scrollStart = this.$refs.viewport.scrollLeft;
+                this.scrollPos = this.$refs.viewport.scrollLeft;
+            },
+
+            onMouseMove(e) {
+                if (!this.isDown || !this.$refs.viewport) return;
+                const x = e.pageX - this.$refs.viewport.offsetLeft;
+                const walk = (x - this.startX);
+                if (Math.abs(walk) > 4) {
+                    this.isDragging = true;
+                }
+                this.$refs.viewport.scrollLeft = this.scrollStart - walk;
+                this.scrollPos = this.$refs.viewport.scrollLeft;
+            },
+
+            onMouseUp() {
+                this.isDown = false;
+                setTimeout(() => {
+                    this.isDragging = false;
+                }, 70);
+            },
+
+            onMouseLeave() {
+                this.onMouseUp();
+                if (!this.activeCard && this.$refs.viewport) {
+                    this.scrollPos = this.$refs.viewport.scrollLeft;
+                    this.isPaused = false;
+                }
+            },
+
+            onWheel(e) {
+                if (!this.$refs.viewport) return;
+                this.isPaused = true;
+                this.$refs.viewport.scrollLeft += (e.deltaY || e.deltaX);
+                this.scrollPos = this.$refs.viewport.scrollLeft;
+
+                clearTimeout(this.wheelTimer);
+                this.wheelTimer = setTimeout(() => {
+                    if (!this.activeCard && this.$refs.viewport) {
+                        this.scrollPos = this.$refs.viewport.scrollLeft;
+                        this.isPaused = false;
+                    }
+                }, 1200);
+            },
+
+            onScroll() {
+                if ((this.isDown || this.isPaused) && this.$refs.viewport) {
+                    this.scrollPos = this.$refs.viewport.scrollLeft;
+                }
+            },
+
+            onTouchStart(e) {
+                this.isPaused = true;
+                if (e.touches && e.touches[0]) {
+                    this.touchStartX = e.touches[0].clientX;
+                }
+            },
+
+            onTouchMove(e) {
+                if (e.touches && e.touches[0] && this.touchStartX !== null) {
+                    if (Math.abs(e.touches[0].clientX - this.touchStartX) > 6) {
+                        this.isDragging = true;
+                    }
+                }
+            },
+
+            onTouchEnd() {
+                setTimeout(() => {
+                    this.isDragging = false;
+                    this.touchStartX = null;
+                    if (!this.activeCard && this.$refs.viewport) {
+                        this.scrollPos = this.$refs.viewport.scrollLeft;
+                        this.isPaused = false;
+                    }
+                }, 150);
+            },
+
+            onCardClick(cardEl) {
+                if (this.isDragging) return;
+
+                const id = cardEl.dataset.id;
+                const type = cardEl.dataset.type;
+
+                if (this.activeCard && this.activeCard.id === id && this.activeCard.type === type) {
+                    this.closePopover();
+                    return;
+                }
+
+                this.activeCard = {
+                    id: id,
+                    type: type,
+                    user_id: cardEl.dataset.userId,
+                    username: cardEl.dataset.username,
+                    avatar: cardEl.dataset.avatar,
+                    wall: cardEl.dataset.wall,
+                    offer: cardEl.dataset.offer,
+                    amount: cardEl.dataset.amount
+                };
+
+                this.isPaused = true;
+                this.$nextTick(() => {
+                    this.positionPopover(cardEl);
+                });
+            },
+
+            onDataCardClick(item, cardEl) {
+                if (this.isDragging) return;
+
+                if (this.activeCard && this.activeCard.id === item.id && this.activeCard.type === item.type) {
+                    this.closePopover();
+                    return;
+                }
+
+                this.activeCard = item;
+                this.isPaused = true;
+                this.$nextTick(() => {
+                    this.positionPopover(cardEl);
+                });
+            },
+
+            positionPopover(cardEl) {
+                if (!cardEl || !this.$refs.container) return;
+                const cardRect = cardEl.getBoundingClientRect();
+                const containerRect = this.$refs.container.getBoundingClientRect();
+
+                const cardCenter = (cardRect.left - containerRect.left) + (cardRect.width / 2);
+                const popoverWidth = 270;
+                const halfWidth = popoverWidth / 2;
+
+                const minLeft = halfWidth + 8;
+                const maxLeft = containerRect.width - halfWidth - 8;
+                const clampedCenter = Math.max(minLeft, Math.min(maxLeft, cardCenter));
+
+                this.popoverLeft = clampedCenter;
+                this.popoverTop = (cardRect.bottom - containerRect.top) + 8;
+
+                const arrowOffset = cardCenter - (clampedCenter - halfWidth);
+                this.arrowLeft = `${Math.max(16, Math.min(popoverWidth - 16, arrowOffset))}px`;
+            },
+
+            closePopover() {
+                this.activeCard = null;
+                if (this.$refs.viewport) {
+                    this.scrollPos = this.$refs.viewport.scrollLeft;
+                }
+                this.isPaused = false;
+            },
+
+            prependActivity(data) {
+                if (!data) return;
+                const exists = this.prependItems.some(i => i.id == data.id && i.type == data.type);
+                if (exists) return;
+
+                this.prependItems.unshift(data);
+                if (this.prependItems.length > 25) {
+                    this.prependItems.pop();
+                }
+
+                if (this.$refs.viewport) {
+                    this.$refs.viewport.scrollTo({ left: 0, behavior: 'smooth' });
+                    this.scrollPos = 0;
+                }
+            }
+        }));
+    }
+
+    if (window.Alpine) {
+        initLiveTicker();
+    } else {
+        document.addEventListener('alpine:init', initLiveTicker);
+    }
+})();
+</script>
