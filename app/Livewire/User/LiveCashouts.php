@@ -4,11 +4,9 @@ namespace App\Livewire\User;
 
 use App\Models\CashoutRequest;
 use App\Models\Lead;
-use Livewire\Attributes\Lazy;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
-#[Lazy]
 class LiveCashouts extends Component
 {
     protected $listeners = ['echo:leads,LeadsUpdated' => '$refresh'];
