@@ -9,6 +9,7 @@ use Livewire\Component;
 
 class LiveCashouts extends Component
 {
+    public array $activities = [];
     public $lastCheckedLeadId = 0;
 
     protected $listeners = [
@@ -17,15 +18,14 @@ class LiveCashouts extends Component
 
     public function mount(): void
     {
+        $this->activities = $this->withdrawalsAndLeads();
         $latest = Lead::where('type', 'offer')->where('status', 'approved')->latest('id')->first();
         $this->lastCheckedLeadId = $latest?->id ?? 0;
     }
 
     public function render()
     {
-        return view('livewire.user.live-cashouts', [
-            'activities' => $this->withdrawalsAndLeads()
-        ]);
+        return view('livewire.user.live-cashouts');
     }
 
     public function handleNewLeads(): void
@@ -40,6 +40,10 @@ class LiveCashouts extends Component
 
         foreach ($newLeads->reverse() as $lead) {
             $formatted = $this->formatLeadItem($lead);
+            array_unshift($this->activities, $formatted);
+            if (count($this->activities) > 40) {
+                array_pop($this->activities);
+            }
             $this->dispatch('live-activity-prepend', newActivity: $formatted);
             $this->lastCheckedLeadId = max($this->lastCheckedLeadId, (int)$lead->id);
         }

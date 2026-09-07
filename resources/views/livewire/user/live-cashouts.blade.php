@@ -133,10 +133,9 @@
 </style>
 @endassets
 
-<div wire:poll.20s="checkNewActivity">
+<div wire:poll.30s="checkNewActivity">
     <div class="container-fluid"
          x-data="{
-             items: @js($activities),
              is_coin: (typeof localStorage !== 'undefined' ? localStorage.getItem('isCoin') || '1' : '1'),
              isPaused: false,
              isDown: false,
@@ -149,13 +148,12 @@
              lastTime: null,
              wheelTimer: null,
              touchStartX: null,
-             activeItem: null,
+             activeCard: null,
              popoverLeft: 0,
              popoverTop: 0,
              arrowLeft: '50%',
 
              init() {
-                 this.ensureMinimumItems();
                  this.scrollPos = this.$refs.viewport ? this.$refs.viewport.scrollLeft : 0;
                  this.startAutoScroll();
 
@@ -170,7 +168,7 @@
                  });
 
                  window.addEventListener('resize', () => {
-                     if (this.activeItem) this.closePopover();
+                     if (this.activeCard) this.closePopover();
                  });
 
                  window.addEventListener('hidden.bs.modal', (e) => {
@@ -184,21 +182,20 @@
                  });
              },
 
-             ensureMinimumItems() {
-                 if (this.items.length > 0 && this.items.length < 15) {
-                     const original = [...this.items];
-                     while (this.items.length < 16) {
-                         this.items = this.items.concat(original);
-                     }
-                 }
-             },
-
-             formatAmount(val) {
+             formatCoins(val) {
                  const num = Number(val) || 0;
                  if (this.is_coin === '0') {
                      return '$' + (num / 1000).toFixed(2);
                  }
                  return num.toLocaleString();
+             },
+
+             formatReward(val) {
+                 const num = Number(val) || 0;
+                 if (this.is_coin === '0') {
+                     return '$' + (num / 1000).toFixed(2);
+                 }
+                 return num.toLocaleString() + ' ERC';
              },
 
              startAutoScroll() {
@@ -211,7 +208,7 @@
 
                      const delta = Math.min(rawDelta, 0.05);
 
-                     if (!this.isPaused && !this.isDown && !this.activeItem && this.$refs.viewport) {
+                     if (!this.isPaused && !this.isDown && !this.activeCard && this.$refs.viewport) {
                          const vp = this.$refs.viewport;
                          const halfWidth = vp.scrollWidth / 2;
 
@@ -262,7 +259,7 @@
 
              onMouseLeave() {
                  this.onMouseUp();
-                 if (!this.activeItem && this.$refs.viewport) {
+                 if (!this.activeCard && this.$refs.viewport) {
                      this.scrollPos = this.$refs.viewport.scrollLeft;
                      this.isPaused = false;
                  }
@@ -276,7 +273,7 @@
 
                  clearTimeout(this.wheelTimer);
                  this.wheelTimer = setTimeout(() => {
-                     if (!this.activeItem && this.$refs.viewport) {
+                     if (!this.activeCard && this.$refs.viewport) {
                          this.scrollPos = this.$refs.viewport.scrollLeft;
                          this.isPaused = false;
                      }
@@ -308,24 +305,36 @@
                  setTimeout(() => {
                      this.isDragging = false;
                      this.touchStartX = null;
-                     if (!this.activeItem && this.$refs.viewport) {
+                     if (!this.activeCard && this.$refs.viewport) {
                          this.scrollPos = this.$refs.viewport.scrollLeft;
                          this.isPaused = false;
                      }
                  }, 150);
              },
 
-             toggleCardPopover(item, cardEl) {
+             onCardClick(cardEl) {
                  if (this.isDragging) return;
 
-                 if (this.activeItem && this.activeItem.id === item.id && this.activeItem.type === item.type) {
+                 const id = cardEl.dataset.id;
+                 const type = cardEl.dataset.type;
+
+                 if (this.activeCard && this.activeCard.id === id && this.activeCard.type === type) {
                      this.closePopover();
                      return;
                  }
 
-                 this.activeItem = item;
-                 this.isPaused = true;
+                 this.activeCard = {
+                     id: id,
+                     type: type,
+                     user_id: cardEl.dataset.userId,
+                     username: cardEl.dataset.username,
+                     avatar: cardEl.dataset.avatar,
+                     wall: cardEl.dataset.wall,
+                     offer: cardEl.dataset.offer,
+                     amount: cardEl.dataset.amount
+                 };
 
+                 this.isPaused = true;
                  this.$nextTick(() => {
                      this.positionPopover(cardEl);
                  });
@@ -352,23 +361,55 @@
              },
 
              closePopover() {
-                 this.activeItem = null;
+                 this.activeCard = null;
                  if (this.$refs.viewport) {
                      this.scrollPos = this.$refs.viewport.scrollLeft;
                  }
                  this.isPaused = false;
              },
 
-             prependActivity(newActivity) {
-                 if (!newActivity) return;
-                 const exists = this.items.some(i => i.id === newActivity.id && i.type === newActivity.type);
-                 if (exists) return;
+             prependActivity(data) {
+                 if (!data || !this.$refs.track) return;
+                 const card = document.createElement('div');
+                 card.className = 'card live-card-item text-white px-3 py-1 activity-is-new';
+                 card.dataset.id = data.id;
+                 card.dataset.type = data.type;
+                 card.dataset.userId = data.user_id;
+                 card.dataset.username = data.username;
+                 card.dataset.avatar = data.avatar;
+                 card.dataset.wall = data.wall;
+                 card.dataset.offer = data.offer;
+                 card.dataset.amount = data.amount;
 
-                 newActivity.isNew = true;
-                 this.items.unshift(newActivity);
-                 if (this.items.length > 40) {
-                     this.items.pop();
-                 }
+                 const bgStyle = data.bg_color ? `background-color: ${data.bg_color} !important;` : 'background-color: rgba(255,255,255,0.08);';
+                 const imgSrc = data.image || data.avatar;
+                 const formattedAmt = this.formatCoins(data.amount);
+
+                 card.innerHTML = `
+                     <div class="d-flex align-items-center gap-2">
+                         <div class="d-flex justify-content-center rounded-2 align-items-center overflow-hidden flex-shrink-0"
+                              style="width: 28px; height: 28px; ${bgStyle}">
+                             <img height="100%" width="100%" class="object-fit-contain" src="${imgSrc}"
+                                  onerror="this.onerror=null; this.src='{{ asset('assets/img/icon-light.png') }}';" alt="${data.wall}">
+                         </div>
+                         <div class="d-flex flex-column text-start overflow-hidden" style="min-width: 80px; max-width: 125px;">
+                             <span class="mb-0 text-truncate text-white fw-semibold" style="font-size: 12px; line-height: 1.2;">${data.wall}</span>
+                             <span class="text-secondary text-truncate" style="font-size: 11px; line-height: 1.2;">${data.username}</span>
+                         </div>
+                         <div class="ms-auto flex-shrink-0">
+                             <span class="rounded-pill badge live-cashout-badge d-flex align-items-center gap-1 px-2 py-1">
+                                 <img src="{{ asset('assets/img/coin.png') }}?v=2" style="${this.is_coin === '0' ? 'display:none;' : ''} width: 13px; height: 13px; object-fit: contain;" alt="ERC">
+                                 <span style="font-size: 11px;">${formattedAmt}</span>
+                             </span>
+                         </div>
+                     </div>
+                 `;
+
+                 card.addEventListener('click', () => {
+                     this.onCardClick(card);
+                 });
+
+                 this.$refs.track.insertBefore(card, this.$refs.track.firstChild);
 
                  if (this.$refs.viewport) {
                      this.$refs.viewport.scrollTo({ left: 0, behavior: 'smooth' });
@@ -402,81 +443,54 @@
                  @touchstart="onTouchStart($event)"
                  @touchmove="onTouchMove($event)"
                  @touchend="onTouchEnd()">
-                <div class="live-stream-track" wire:ignore>
-                    {{-- Set 1 --}}
-                    <template x-for="(item, idx) in items" :key="item.type + '-' + item.id">
-                        <div class="card live-card-item text-white px-3 py-1"
-                             :class="{
-                                 'activity-is-new': item.isNew,
-                                 'active-card': activeItem && activeItem.id === item.id && activeItem.type === item.type
-                             }"
-                             @click="toggleCardPopover(item, $event.currentTarget)">
-                            <div class="d-flex align-items-center gap-2">
-                                <div class="d-flex justify-content-center rounded-2 align-items-center overflow-hidden flex-shrink-0"
-                                     style="width: 28px; height: 28px;"
-                                     :style="item.bg_color ? `background-color: ${item.bg_color} !important;` : 'background-color: rgba(255,255,255,0.08);'">
-                                    <img height="100%"
-                                         width="100%"
-                                         class="object-fit-contain"
-                                         :src="item.image || item.avatar"
-                                         onerror="this.onerror=null; this.src='{{ asset('assets/img/icon-light.png') }}';"
-                                         :alt="item.wall">
-                                </div>
+                <div class="live-stream-track" x-ref="track" wire:ignore.self>
+                    @if(count($activities) > 0)
+                        @for($set = 0; $set < 2; $set++)
+                            @foreach($activities as $item)
+                                <div class="card live-card-item text-white px-3 py-1"
+                                     data-id="{{ $item['id'] }}"
+                                     data-type="{{ $item['type'] }}"
+                                     data-user-id="{{ $item['user_id'] }}"
+                                     data-username="{{ $item['username'] }}"
+                                     data-avatar="{{ $item['avatar'] }}"
+                                     data-wall="{{ $item['wall'] }}"
+                                     data-offer="{{ $item['offer'] }}"
+                                     data-amount="{{ $item['amount'] }}"
+                                     :class="{ 'active-card': activeCard && activeCard.id == '{{ $item['id'] }}' && activeCard.type == '{{ $item['type'] }}' }"
+                                     @click="onCardClick($event.currentTarget)">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="d-flex justify-content-center rounded-2 align-items-center overflow-hidden flex-shrink-0"
+                                             style="width: 28px; height: 28px; {{ $item['bg_color'] ? 'background-color: ' . $item['bg_color'] . ' !important;' : 'background-color: rgba(255,255,255,0.08);' }}">
+                                            <img height="100%"
+                                                 width="100%"
+                                                 class="object-fit-contain"
+                                                 src="{{ $item['image'] ?: $item['avatar'] }}"
+                                                 onerror="this.onerror=null; this.src='{{ asset('assets/img/icon-light.png') }}';"
+                                                 alt="{{ $item['wall'] }}">
+                                        </div>
 
-                                <div class="d-flex flex-column text-start overflow-hidden" style="min-width: 80px; max-width: 125px;">
-                                    <span class="mb-0 text-truncate text-white fw-semibold" style="font-size: 12px; line-height: 1.2;" x-text="item.wall"></span>
-                                    <span class="text-secondary text-truncate" style="font-size: 11px; line-height: 1.2;" x-text="item.username"></span>
-                                </div>
+                                        <div class="d-flex flex-column text-start overflow-hidden" style="min-width: 80px; max-width: 125px;">
+                                            <span class="mb-0 text-truncate text-white fw-semibold" style="font-size: 12px; line-height: 1.2;">{{ $item['wall'] }}</span>
+                                            <span class="text-secondary text-truncate" style="font-size: 11px; line-height: 1.2;">{{ $item['username'] }}</span>
+                                        </div>
 
-                                <div class="ms-auto flex-shrink-0">
-                                    <span class="rounded-pill badge live-cashout-badge d-flex align-items-center gap-1 px-2 py-1">
-                                        <img src="{{ asset('assets/img/coin.png') }}?v=2" x-show="is_coin !== '0'" width="13px" height="13px" style="object-fit: contain;" alt="ERC">
-                                        <span style="font-size: 11px;" x-text="formatAmount(item.amount)"></span>
-                                    </span>
+                                        <div class="ms-auto flex-shrink-0">
+                                            <span class="rounded-pill badge live-cashout-badge d-flex align-items-center gap-1 px-2 py-1">
+                                                <img src="{{ asset('assets/img/coin.png') }}?v=2" x-show="is_coin !== '0'" width="13px" height="13px" style="object-fit: contain;" alt="ERC">
+                                                <span style="font-size: 11px;" x-text="formatCoins('{{ $item['amount'] }}')">{{ number_format($item['amount']) }}</span>
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    </template>
-
-                    {{-- Set 2 (Clone for Continuous Infinite Scroll) --}}
-                    <template x-for="(item, idx) in items" :key="'dup-' + item.type + '-' + item.id">
-                        <div class="card live-card-item text-white px-3 py-1"
-                             :class="{
-                                 'active-card': activeItem && activeItem.id === item.id && activeItem.type === item.type
-                             }"
-                             @click="toggleCardPopover(item, $event.currentTarget)">
-                            <div class="d-flex align-items-center gap-2">
-                                <div class="d-flex justify-content-center rounded-2 align-items-center overflow-hidden flex-shrink-0"
-                                     style="width: 28px; height: 28px;"
-                                     :style="item.bg_color ? `background-color: ${item.bg_color} !important;` : 'background-color: rgba(255,255,255,0.08);'">
-                                    <img height="100%"
-                                         width="100%"
-                                         class="object-fit-contain"
-                                         :src="item.image || item.avatar"
-                                         onerror="this.onerror=null; this.src='{{ asset('assets/img/icon-light.png') }}';"
-                                         :alt="item.wall">
-                                </div>
-
-                                <div class="d-flex flex-column text-start overflow-hidden" style="min-width: 80px; max-width: 125px;">
-                                    <span class="mb-0 text-truncate text-white fw-semibold" style="font-size: 12px; line-height: 1.2;" x-text="item.wall"></span>
-                                    <span class="text-secondary text-truncate" style="font-size: 11px; line-height: 1.2;" x-text="item.username"></span>
-                                </div>
-
-                                <div class="ms-auto flex-shrink-0">
-                                    <span class="rounded-pill badge live-cashout-badge d-flex align-items-center gap-1 px-2 py-1">
-                                        <img src="{{ asset('assets/img/coin.png') }}?v=2" x-show="is_coin !== '0'" width="13px" height="13px" style="object-fit: contain;" alt="ERC">
-                                        <span style="font-size: 11px;" x-text="formatAmount(item.amount)"></span>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </template>
+                            @endforeach
+                        @endfor
+                    @endif
                 </div>
             </div>
 
             <!-- Floating Details Popover (Matching PaidCash Reference Image) -->
             <div class="activity-popover-box"
-                 x-show="activeItem"
+                 x-show="activeCard"
                  x-cloak
                  x-transition:enter="transition ease-out duration-150"
                  x-transition:enter-start="opacity-0 transform -translate-y-2 scale-95"
@@ -494,13 +508,13 @@
                     <!-- Wall Row -->
                     <div class="d-flex align-items-baseline gap-2">
                         <span style="min-width: 54px; color: #8a99ad; font-weight: 500;">Wall:</span>
-                        <span style="color: #38bdf8; font-weight: 600;" x-text="activeItem?.wall"></span>
+                        <span style="color: #38bdf8; font-weight: 600;" x-text="activeCard?.wall"></span>
                     </div>
 
                     <!-- Offer Row -->
                     <div class="d-flex align-items-baseline gap-2">
                         <span style="min-width: 54px; color: #8a99ad; font-weight: 500;">Offer:</span>
-                        <span class="text-break" style="color: #38bdf8; font-weight: 400;" x-text="activeItem?.offer"></span>
+                        <span class="text-break" style="color: #38bdf8; font-weight: 400;" x-text="activeCard?.offer"></span>
                     </div>
 
                     <!-- Amount Row -->
@@ -508,18 +522,18 @@
                         <span style="min-width: 54px; color: #8a99ad; font-weight: 500;">Amount:</span>
                         <span class="d-inline-flex align-items-center gap-1" style="color: #38bdf8; font-weight: 600;">
                             <img src="{{ asset('assets/img/coin.png') }}?v=2" x-show="is_coin !== '0'" width="13px" height="13px" alt="ERC">
-                            <span x-text="is_coin === '0' ? ('$' + ((Number(activeItem?.amount) || 0) / 1000).toFixed(2)) : `${Number(activeItem?.amount || 0).toLocaleString()} ERC`"></span>
+                            <span x-text="formatReward(activeCard?.amount)"></span>
                         </span>
                     </div>
 
                     <!-- Member Footer with View Profile Button -->
                     <div class="pt-2 mt-1 border-top border-secondary border-opacity-25 d-flex align-items-center justify-content-between">
                         <div class="d-flex align-items-center gap-1 text-secondary small">
-                            <img :src="activeItem?.avatar" class="rounded-circle" width="18" height="18" onerror="this.onerror=null; this.src='{{ asset('assets/img/icon-light.png') }}';">
-                            <span class="text-truncate" style="max-width: 100px;" x-text="activeItem?.username"></span>
+                            <img :src="activeCard?.avatar" class="rounded-circle" width="18" height="18" onerror="this.onerror=null; this.src='{{ asset('assets/img/icon-light.png') }}';">
+                            <span class="text-truncate" style="max-width: 100px;" x-text="activeCard?.username"></span>
                         </div>
                         <button type="button" class="btn btn-xs btn-outline-info py-0 px-2 fw-semibold" style="font-size: 10px;"
-                                @click="$dispatch('activity-open', { user_id: activeItem?.user_id, lead_id: (activeItem?.type === 'lead' ? activeItem?.id : null) }); closePopover();">
+                                @click="$dispatch('activity-open', { user_id: activeCard?.user_id, lead_id: (activeCard?.type === 'lead' ? activeCard?.id : null) }); closePopover();">
                             View Profile
                         </button>
                     </div>
