@@ -41,6 +41,7 @@
 
         @vite(['resources/assets/vendor/js/helpers.js', 'resources/assets/js/config.js'])
         @vite(['resources/assets/css/app.css'])
+        <link rel="stylesheet" href="{{ asset('css/theme-obsidian.css') }}?v=1.0.0"/>
         @stack('css')
 
         <!-- Google tag (gtag.js) -->
