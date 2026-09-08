@@ -132,7 +132,7 @@ abstract class Postback
         $this->validate($data);
 
         // ✅ Postback success handler
-        $this->successPostback($data);
+        $this->successPostback($data, $isTestPing);
 
         return response("1", 200);
 
@@ -187,14 +187,16 @@ abstract class Postback
         }
     }
 
-    protected function successPostback($data)
+    protected function successPostback($data, $isTestPing = false)
     {
         if ($this->hasChargeback($data)) {
             $this->applyChargeback($data);
             return;
         }
 
-        $this->applyPending($data);
+        if (!$isTestPing) {
+            $this->applyPending($data);
+        }
 
         // ✅ Check if a transaction with this trx ID already exists
         if (!empty($data['trx'])) {
