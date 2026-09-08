@@ -60,8 +60,8 @@
         cursor: grabbing !important;
     }
 
-    .live-stream-viewport.is-grabbing .live-card-item {
-        pointer-events: none !important;
+    [x-cloak] {
+        display: none !important;
     }
 
     .live-stream-track {
@@ -103,6 +103,7 @@
         padding: 13px 16px;
         width: 270px;
         max-width: 90vw;
+        pointer-events: auto;
     }
 
     .activity-popover-arrow {
@@ -158,19 +159,28 @@
             <!-- Scrollable & Draggable Live Feed Track -->
             <div class="live-stream-viewport flex-grow-1 py-1 px-1"
                  x-ref="viewport"
-                 :class="{ 'is-grabbing': isDown }"
+                 :class="{ 'is-grabbing': isDragging }"
                  @pointerdown="onPointerDown($event)"
                  @pointermove="onPointerMove($event)"
                  @pointerup="onPointerUp($event)"
                  @pointercancel="onPointerCancel($event)"
                  @wheel.prevent="onWheel($event)"
-                 @scroll.passive="onScroll()">
+                 @scroll.passive="onScroll()"
+                 @click="onViewportClick($event)">
                 <div class="live-stream-track" x-ref="track" wire:ignore.self>
                     {{-- Prepend items (dynamically added at first on left side) --}}
                     <template x-for="item in prependItems" :key="'prep-' + item.type + '-' + item.id">
                         <div class="card live-card-item text-white px-3 py-1 activity-is-new"
-                             :class="{ 'active-card': activeCard && activeCard.id == item.id && activeCard.type == item.type }"
-                             @click="onDataCardClick(item, $event.currentTarget)">
+                             :data-id="item.id"
+                             :data-type="item.type"
+                             :data-user-id="item.user_id"
+                             :data-username="item.username"
+                             :data-avatar="item.avatar"
+                             :data-wall="item.wall"
+                             :data-offer="item.offer"
+                             :data-amount="item.amount"
+                             :class="{ 'active-card': activeCard && String(activeCard.id) === String(item.id) && activeCard.type === item.type }"
+                             @click.stop="onCardClick($event, $el)">
                             <div class="d-flex align-items-center gap-2">
                                 <div class="d-flex justify-content-center rounded-2 align-items-center overflow-hidden flex-shrink-0"
                                      style="width: 28px; height: 28px;"
@@ -210,8 +220,8 @@
                                  data-wall="{{ $item['wall'] }}"
                                  data-offer="{{ $item['offer'] }}"
                                  data-amount="{{ $item['amount'] }}"
-                                 :class="{ 'active-card': activeCard && activeCard.id == '{{ $item['id'] }}' && activeCard.type == '{{ $item['type'] }}' }"
-                                 @click="onCardClick($event.currentTarget)">
+                                 :class="{ 'active-card': activeCard && String(activeCard.id) === String('{{ $item['id'] }}') && activeCard.type === '{{ $item['type'] }}' }"
+                                 @click.stop="onCardClick($event, $el)">
                                 <div class="d-flex align-items-center gap-2">
                                     <div class="d-flex justify-content-center rounded-2 align-items-center overflow-hidden flex-shrink-0"
                                          style="width: 28px; height: 28px; {{ $item['bg_color'] ? 'background-color: ' . $item['bg_color'] . ' !important;' : 'background-color: rgba(255,255,255,0.08);' }}">
@@ -246,13 +256,13 @@
                  x-show="activeCard"
                  x-cloak
                  x-transition:enter="transition ease-out duration-150"
-                 x-transition:enter-start="opacity-0 transform -translate-y-2 scale-95"
-                 x-transition:enter-end="opacity-100 transform translate-y-0 scale-100"
+                 x-transition:enter-start="opacity-0 translate-y-1"
+                 x-transition:enter-end="opacity-100 translate-y-0"
                  x-transition:leave="transition ease-in duration-100"
-                 x-transition:leave-start="opacity-100 transform translate-y-0 scale-100"
-                 x-transition:leave-end="opacity-0 transform -translate-y-2 scale-95"
+                 x-transition:leave-start="opacity-100 translate-y-0"
+                 x-transition:leave-end="opacity-0 translate-y-1"
                  @click.outside="closePopover()"
-                 :style="`position: absolute; top: ${popoverTop}px; left: ${popoverLeft}px; transform: translateX(-50%); z-index: 1060;`">
+                 :style="`position: absolute; top: ${popoverTop}px; left: ${popoverLeft}px; margin-left: -135px; z-index: 1060;`">
 
                 <!-- Arrow pointing to card -->
                 <div class="activity-popover-arrow" :style="`left: ${arrowLeft};`"></div>
@@ -305,6 +315,8 @@
             is_coin: (typeof localStorage !== 'undefined' ? localStorage.getItem('isCoin') || '1' : '1'),
             isDown: false,
             isDragging: false,
+            hasMoved: false,
+            capturedPointerId: null,
             startX: 0,
             scrollStart: 0,
             lastX: 0,
@@ -393,15 +405,13 @@
                 this.stopMomentum();
                 this.isDown = true;
                 this.isDragging = false;
+                this.hasMoved = false;
                 this.startX = e.clientX;
                 this.lastX = e.clientX;
                 this.lastTime = performance.now();
                 this.scrollStart = this.$refs.viewport.scrollLeft;
                 this.velocity = 0;
-
-                try {
-                    e.currentTarget.setPointerCapture(e.pointerId);
-                } catch (err) {}
+                this.capturedPointerId = null;
             },
 
             onPointerMove(e) {
@@ -411,37 +421,52 @@
                 const now = performance.now();
                 const walk = currentX - this.startX;
 
-                if (Math.abs(walk) > 4) {
+                if (!this.hasMoved && Math.abs(walk) > 6) {
+                    this.hasMoved = true;
                     this.isDragging = true;
                     if (this.activeCard) this.closePopover();
+                    try {
+                        e.currentTarget.setPointerCapture(e.pointerId);
+                        this.capturedPointerId = e.pointerId;
+                    } catch (err) {}
                 }
 
-                this.$refs.viewport.scrollLeft = this.scrollStart - walk;
+                if (this.isDragging) {
+                    this.$refs.viewport.scrollLeft = this.scrollStart - walk;
 
-                const dt = Math.max(now - this.lastTime, 8);
-                const dx = currentX - this.lastX;
-                const instantVel = dx / dt;
-                this.velocity = (this.velocity * 0.3) + (instantVel * 0.7);
+                    const dt = Math.max(now - this.lastTime, 8);
+                    const dx = currentX - this.lastX;
+                    const instantVel = dx / dt;
+                    this.velocity = (this.velocity * 0.3) + (instantVel * 0.7);
 
-                this.lastX = currentX;
-                this.lastTime = now;
+                    this.lastX = currentX;
+                    this.lastTime = now;
+                }
             },
 
             onPointerUp(e) {
                 if (!this.isDown) return;
                 this.isDown = false;
 
-                try {
-                    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-                        e.currentTarget.releasePointerCapture(e.pointerId);
-                    }
-                } catch (err) {}
+                if (this.capturedPointerId !== null) {
+                    try {
+                        if (e.currentTarget.hasPointerCapture(this.capturedPointerId)) {
+                            e.currentTarget.releasePointerCapture(this.capturedPointerId);
+                        }
+                    } catch (err) {}
+                    this.capturedPointerId = null;
+                }
 
-                this.startMomentum();
-
-                setTimeout(() => {
+                if (this.isDragging) {
+                    this.startMomentum();
+                    setTimeout(() => {
+                        this.isDragging = false;
+                        this.hasMoved = false;
+                    }, 120);
+                } else {
                     this.isDragging = false;
-                }, 80);
+                    this.hasMoved = false;
+                }
             },
 
             onPointerCancel(e) {
@@ -458,18 +483,32 @@
             },
 
             onScroll() {
-                if (this.activeCard && this.isDragging) {
+                if (this.activeCard) {
                     this.closePopover();
                 }
             },
 
-            onCardClick(cardEl) {
-                if (this.isDragging) return;
+            onViewportClick(e) {
+                if (this.isDragging || this.hasMoved) return;
+                const cardEl = e.target.closest('.live-card-item');
+                if (!cardEl) return;
+                if (e) e.stopPropagation();
+                this.selectCard(cardEl);
+            },
+
+            onCardClick(e, cardEl) {
+                if (e) e.stopPropagation();
+                if (this.isDragging || this.hasMoved) return;
+                this.selectCard(cardEl);
+            },
+
+            selectCard(cardEl) {
+                if (!cardEl) return;
 
                 const id = cardEl.dataset.id;
                 const type = cardEl.dataset.type;
 
-                if (this.activeCard && this.activeCard.id === id && this.activeCard.type === type) {
+                if (this.activeCard && String(this.activeCard.id) === String(id) && this.activeCard.type === type) {
                     this.closePopover();
                     return;
                 }
@@ -485,20 +524,6 @@
                     amount: cardEl.dataset.amount
                 };
 
-                this.$nextTick(() => {
-                    this.positionPopover(cardEl);
-                });
-            },
-
-            onDataCardClick(item, cardEl) {
-                if (this.isDragging) return;
-
-                if (this.activeCard && this.activeCard.id === item.id && this.activeCard.type === item.type) {
-                    this.closePopover();
-                    return;
-                }
-
-                this.activeCard = item;
                 this.$nextTick(() => {
                     this.positionPopover(cardEl);
                 });
