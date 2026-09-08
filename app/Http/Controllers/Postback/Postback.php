@@ -83,6 +83,14 @@ abstract class Postback
         $data['campaign_id'] = $data['campaign_id'] ?? $data['offer_id'] ?? $data['of_id'] ?? null;
         $data['campaign_name'] = $data['campaign_name'] ?? $data['offer_name'] ?? $data['of_name'] ?? null;
 
+        // ✅ Resolve username to user ID if non-numeric user_id is provided
+        if (!empty($data['user_id']) && !is_numeric($data['user_id'])) {
+            $matchedUser = User::where('username', $data['user_id'])->orWhere('email', $data['user_id'])->first();
+            if ($matchedUser) {
+                $data['user_id'] = $matchedUser->id;
+            }
+        }
+
         // ✅ Handle network test pings gracefully
         $uidStr = strtolower(trim((string)($data['user_id'] ?? '')));
         $trxStr = strtolower(trim((string)($data['trx'] ?? '')));
@@ -94,13 +102,21 @@ abstract class Postback
             || $offerNameStr === 'postback-tester'
             || str_starts_with($trxStr, 'test')
             || str_starts_with($uidStr, 'test')
-            || in_array($uidStr, ['test', 'test_user', 'super_admin', 'admin', 'tester']);
+            || in_array($uidStr, ['test', 'test_user', 'admin', 'tester']);
 
         if ($isTestPing) {
             $userExists = is_numeric($data['user_id']) && User::where('id', $data['user_id'])->exists();
             if (!$userExists) {
-                Log::channel('postback')->info("Test conversion ping received and acknowledged for {$companyName}", $data);
-                return response("1", 200);
+                // If user doesn't exist (e.g. dummy test ID 12345 sent by offerwall test tools),
+                // map to an active user so the test actually creates a visible lead on the live feed!
+                $fallbackUser = User::where('username', 'super_admin')->first() ?? User::first();
+                if ($fallbackUser) {
+                    $data['user_id'] = $fallbackUser->id;
+                    Log::channel('postback')->info("Test conversion ping mapped to user #{$fallbackUser->id} ({$fallbackUser->username}) for {$companyName}", $data);
+                } else {
+                    Log::channel('postback')->info("Test conversion ping received and acknowledged for {$companyName}", $data);
+                    return response("1", 200);
+                }
             }
         }
 

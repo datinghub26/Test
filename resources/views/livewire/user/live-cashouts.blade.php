@@ -134,7 +134,7 @@
 @endassets
 
 <div>
-    <div class="container-fluid" x-data="liveActivityTicker()">
+    <div class="container-fluid" x-data="liveActivityTicker()" wire:poll.15s="checkNewActivity">
         <div class="d-flex align-items-center mt-2 position-relative gap-2 live-activity-container"
              x-ref="container">
             <!-- Pinned Live Indicator Badge -->
@@ -333,12 +333,6 @@
                 window.addEventListener('activity-modal-closed', () => {
                     this.closePopover();
                 });
-
-                setInterval(() => {
-                    if (this.$wire && typeof this.$wire.checkNewActivity === 'function') {
-                        this.$wire.checkNewActivity();
-                    }
-                }, 25000);
             },
 
             formatCoins(val) {
