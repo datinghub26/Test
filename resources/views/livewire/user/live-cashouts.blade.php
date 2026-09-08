@@ -40,6 +40,8 @@
         overflow-x: auto;
         overflow-y: hidden;
         width: 100%;
+        height: 52px;
+        max-height: 52px;
         cursor: grab;
         user-select: none;
         -webkit-user-select: none;
@@ -49,6 +51,8 @@
         -webkit-overflow-scrolling: touch;
         touch-action: pan-y;
         overscroll-behavior-x: contain;
+        display: flex;
+        align-items: center;
     }
 
     .live-stream-viewport::-webkit-scrollbar {
@@ -69,6 +73,8 @@
         width: max-content;
         gap: 8px;
         align-items: center;
+        height: 44px;
+        max-height: 44px;
         transform: translateZ(0);
         will-change: scroll-position;
     }
@@ -78,11 +84,15 @@
         cursor: pointer;
         min-width: 205px;
         max-width: 250px;
+        height: 44px !important;
+        max-height: 44px !important;
         background: #171a23 !important;
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
         border-radius: 8px;
         transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
         flex-shrink: 0;
+        overflow: hidden !important;
+        box-sizing: border-box;
     }
 
     .live-card-item:hover,
@@ -90,6 +100,30 @@
         border-color: rgba(56, 189, 248, 0.5) !important;
         transform: translateY(-1px);
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    }
+
+    .live-card-icon-wrap {
+        width: 28px !important;
+        height: 28px !important;
+        min-width: 28px !important;
+        min-height: 28px !important;
+        max-width: 28px !important;
+        max-height: 28px !important;
+        border-radius: 6px;
+        overflow: hidden !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex-shrink: 0 !important;
+    }
+
+    .live-card-icon-wrap img {
+        width: 28px !important;
+        height: 28px !important;
+        max-width: 28px !important;
+        max-height: 28px !important;
+        object-fit: contain !important;
+        display: block !important;
     }
 
     /* Floating Details Popover (Matching PaidCash Reference Image) */
@@ -124,20 +158,23 @@
             opacity: 0;
             transform: translateX(-30px) scale(0.88);
             max-width: 0;
-            padding: 0;
+            max-height: 44px;
+            padding-left: 0;
+            padding-right: 0;
             margin: 0;
         }
         100% {
             opacity: 1;
             transform: translateX(0) scale(1);
             max-width: 250px;
+            max-height: 44px;
         }
     }
 
     .activity-is-new {
         animation: liveItemPrepend 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         border-color: #37E780 !important;
-        box-shadow: 0 0 16px rgba(55, 231, 128, 0.4) !important;
+        box-shadow: 0 0 12px rgba(55, 231, 128, 0.35) !important;
     }
 </style>
 @endassets
@@ -170,7 +207,7 @@
                 <div class="live-stream-track" x-ref="track" wire:ignore.self>
                     {{-- Prepend items (dynamically added at first on left side) --}}
                     <template x-for="item in prependItems" :key="'prep-' + item.type + '-' + item.id">
-                        <div class="card live-card-item text-white px-3 py-1 activity-is-new"
+                        <div class="card live-card-item text-white px-3 py-1"
                              :data-id="item.id"
                              :data-type="item.type"
                              :data-user-id="item.user_id"
@@ -179,15 +216,13 @@
                              :data-wall="item.wall"
                              :data-offer="item.offer"
                              :data-amount="item.amount"
-                             :class="{ 'active-card': activeCard && String(activeCard.id) === String(item.id) && activeCard.type === item.type }"
+                             :class="{ 'active-card': activeCard && String(activeCard.id) === String(item.id) && activeCard.type === item.type, 'activity-is-new': item.is_new }"
                              @click.stop="onCardClick($event, $el)">
-                            <div class="d-flex align-items-center gap-2">
-                                <div class="d-flex justify-content-center rounded-2 align-items-center overflow-hidden flex-shrink-0"
-                                     style="width: 28px; height: 28px;"
-                                     :style="item.bg_color ? `background-color: ${item.bg_color} !important;` : 'background-color: rgba(255,255,255,0.08);'">
-                                    <img height="100%"
-                                         width="100%"
-                                         class="object-fit-contain"
+                            <div class="d-flex align-items-center gap-2 h-100">
+                                <div class="live-card-icon-wrap"
+                                     :style="'width: 28px; height: 28px; ' + (item.bg_color ? `background-color: ${item.bg_color} !important;` : 'background-color: rgba(255,255,255,0.08);')">
+                                    <img class="object-fit-contain"
+                                         style="width: 28px; height: 28px; max-width: 28px; max-height: 28px;"
                                          :src="item.image || item.avatar"
                                          onerror="this.onerror=null; this.src='{{ asset('assets/img/icon-light.png') }}';"
                                          :alt="item.wall">
@@ -222,12 +257,11 @@
                                  data-amount="{{ $item['amount'] }}"
                                  :class="{ 'active-card': activeCard && String(activeCard.id) === String('{{ $item['id'] }}') && activeCard.type === '{{ $item['type'] }}' }"
                                  @click.stop="onCardClick($event, $el)">
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="d-flex justify-content-center rounded-2 align-items-center overflow-hidden flex-shrink-0"
+                                <div class="d-flex align-items-center gap-2 h-100">
+                                    <div class="live-card-icon-wrap"
                                          style="width: 28px; height: 28px; {{ $item['bg_color'] ? 'background-color: ' . $item['bg_color'] . ' !important;' : 'background-color: rgba(255,255,255,0.08);' }}">
-                                        <img height="100%"
-                                             width="100%"
-                                             class="object-fit-contain"
+                                        <img class="object-fit-contain"
+                                             style="width: 28px; height: 28px; max-width: 28px; max-height: 28px;"
                                              src="{{ $item['image'] ?: $item['avatar'] }}"
                                              onerror="this.onerror=null; this.src='{{ asset('assets/img/icon-light.png') }}';"
                                              alt="{{ $item['wall'] }}">
@@ -558,10 +592,15 @@
                 const exists = this.prependItems.some(i => i.id == data.id && i.type == data.type);
                 if (exists) return;
 
-                this.prependItems.unshift(data);
+                const itemData = { ...data, is_new: true };
+                this.prependItems.unshift(itemData);
                 if (this.prependItems.length > 20) {
                     this.prependItems.pop();
                 }
+
+                setTimeout(() => {
+                    itemData.is_new = false;
+                }, 5000);
 
                 this.$nextTick(() => {
                     const track = this.$refs.track;
