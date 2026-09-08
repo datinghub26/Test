@@ -47,6 +47,8 @@
         -ms-overflow-style: none;
         scroll-behavior: auto;
         -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+        overscroll-behavior-x: contain;
     }
 
     .live-stream-viewport::-webkit-scrollbar {
@@ -58,11 +60,17 @@
         cursor: grabbing !important;
     }
 
+    .live-stream-viewport.is-grabbing .live-card-item {
+        pointer-events: none !important;
+    }
+
     .live-stream-track {
         display: flex;
         width: max-content;
         gap: 8px;
         align-items: center;
+        transform: translateZ(0);
+        will-change: scroll-position;
     }
 
     /* PaidCash-style live feed card */
@@ -151,15 +159,12 @@
             <div class="live-stream-viewport flex-grow-1 py-1 px-1"
                  x-ref="viewport"
                  :class="{ 'is-grabbing': isDown }"
-                 @mousedown="onMouseDown($event)"
-                 @mousemove="onMouseMove($event)"
-                 @mouseup.window="onMouseUp()"
-                 @mouseleave="onMouseLeave()"
+                 @pointerdown="onPointerDown($event)"
+                 @pointermove="onPointerMove($event)"
+                 @pointerup="onPointerUp($event)"
+                 @pointercancel="onPointerCancel($event)"
                  @wheel.prevent="onWheel($event)"
-                 @scroll.passive="onScroll()"
-                 @touchstart.passive="onTouchStart($event)"
-                 @touchmove.passive="onTouchMove($event)"
-                 @touchend.passive="onTouchEnd()">
+                 @scroll.passive="onScroll()">
                 <div class="live-stream-track" x-ref="track" wire:ignore.self>
                     {{-- Prepend items (dynamically added at first on left side) --}}
                     <template x-for="item in prependItems" :key="'prep-' + item.type + '-' + item.id">
@@ -302,7 +307,10 @@
             isDragging: false,
             startX: 0,
             scrollStart: 0,
-            touchStartX: null,
+            lastX: 0,
+            lastTime: 0,
+            velocity: 0,
+            momentumRaf: null,
             activeCard: null,
             popoverLeft: 0,
             popoverTop: 0,
@@ -351,69 +359,108 @@
                 return num.toLocaleString() + ' ERC';
             },
 
-            onMouseDown(e) {
-                if (e.button !== 0 || !this.$refs.viewport) return;
+            stopMomentum() {
+                if (this.momentumRaf) {
+                    cancelAnimationFrame(this.momentumRaf);
+                    this.momentumRaf = null;
+                }
+                this.velocity = 0;
+            },
+
+            startMomentum() {
+                this.stopMomentum();
+                if (Math.abs(this.velocity) < 0.08 || !this.$refs.viewport) return;
+
+                const vp = this.$refs.viewport;
+                const decay = 0.93;
+                const step = () => {
+                    if (Math.abs(this.velocity) < 0.04) {
+                        this.velocity = 0;
+                        this.momentumRaf = null;
+                        return;
+                    }
+                    vp.scrollLeft -= this.velocity * 16;
+                    this.velocity *= decay;
+                    this.momentumRaf = requestAnimationFrame(step);
+                };
+                this.momentumRaf = requestAnimationFrame(step);
+            },
+
+            onPointerDown(e) {
+                if (e.button !== 0 && e.pointerType === 'mouse') return;
+                if (!this.$refs.viewport) return;
+
+                this.stopMomentum();
                 this.isDown = true;
                 this.isDragging = false;
-                this.startX = e.pageX - this.$refs.viewport.offsetLeft;
+                this.startX = e.clientX;
+                this.lastX = e.clientX;
+                this.lastTime = performance.now();
                 this.scrollStart = this.$refs.viewport.scrollLeft;
+                this.velocity = 0;
+
+                try {
+                    e.currentTarget.setPointerCapture(e.pointerId);
+                } catch (err) {}
             },
 
-            onMouseMove(e) {
+            onPointerMove(e) {
                 if (!this.isDown || !this.$refs.viewport) return;
-                const x = e.pageX - this.$refs.viewport.offsetLeft;
-                const walk = (x - this.startX);
+
+                const currentX = e.clientX;
+                const now = performance.now();
+                const walk = currentX - this.startX;
+
                 if (Math.abs(walk) > 4) {
                     this.isDragging = true;
+                    if (this.activeCard) this.closePopover();
                 }
+
                 this.$refs.viewport.scrollLeft = this.scrollStart - walk;
+
+                const dt = Math.max(now - this.lastTime, 8);
+                const dx = currentX - this.lastX;
+                const instantVel = dx / dt;
+                this.velocity = (this.velocity * 0.3) + (instantVel * 0.7);
+
+                this.lastX = currentX;
+                this.lastTime = now;
             },
 
-            onMouseUp() {
+            onPointerUp(e) {
                 if (!this.isDown) return;
                 this.isDown = false;
+
+                try {
+                    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+                        e.currentTarget.releasePointerCapture(e.pointerId);
+                    }
+                } catch (err) {}
+
+                this.startMomentum();
+
                 setTimeout(() => {
                     this.isDragging = false;
                 }, 80);
             },
 
-            onMouseLeave() {
-                this.onMouseUp();
+            onPointerCancel(e) {
+                this.onPointerUp(e);
             },
 
             onWheel(e) {
                 if (!this.$refs.viewport) return;
+                this.stopMomentum();
                 if (this.activeCard) this.closePopover();
+
                 const delta = e.deltaX !== 0 ? e.deltaX : e.deltaY;
-                this.$refs.viewport.scrollLeft += delta;
+                this.$refs.viewport.scrollBy({ left: delta * 0.85, behavior: 'smooth' });
             },
 
             onScroll() {
-                if (this.activeCard) {
+                if (this.activeCard && this.isDragging) {
                     this.closePopover();
                 }
-            },
-
-            onTouchStart(e) {
-                this.isDragging = false;
-                if (e.touches && e.touches[0]) {
-                    this.touchStartX = e.touches[0].clientX;
-                }
-            },
-
-            onTouchMove(e) {
-                if (e.touches && e.touches[0] && this.touchStartX !== null) {
-                    if (Math.abs(e.touches[0].clientX - this.touchStartX) > 6) {
-                        this.isDragging = true;
-                    }
-                }
-            },
-
-            onTouchEnd() {
-                setTimeout(() => {
-                    this.isDragging = false;
-                    this.touchStartX = null;
-                }, 120);
             },
 
             onCardClick(cardEl) {
